@@ -1,17 +1,46 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginSkeleton />}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginSkeleton() {
+  return (
+    <div className="glass-card rounded-2xl p-8">
+      <div className="h-6 w-40 mx-auto mb-2 rounded bg-white/5 animate-pulse" />
+      <div className="h-4 w-56 mx-auto mb-8 rounded bg-white/5 animate-pulse" />
+      <div className="space-y-4">
+        <div className="h-10 rounded bg-white/5 animate-pulse" />
+        <div className="h-10 rounded bg-white/5 animate-pulse" />
+        <div className="h-10 rounded bg-white/5 animate-pulse" />
+      </div>
+    </div>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackError = searchParams.get("error");
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    callbackError === "auth_callback_failed"
+      ? "Authentication failed. Please try again."
+      : null
+  );
   const [loading, setLoading] = useState(false);
 
   async function handleLogin(e: React.FormEvent) {
@@ -63,14 +92,24 @@ export default function LoginPage() {
           onChange={(e) => setEmail(e.target.value)}
           required
         />
-        <Input
-          label="Password"
-          type="password"
-          placeholder="Your password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+        <div>
+          <Input
+            label="Password"
+            type="password"
+            placeholder="Your password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          <div className="flex justify-end mt-1.5">
+            <Link
+              href="/forgot-password"
+              className="text-xs font-body text-white/30 hover:text-sky-blue transition-colors"
+            >
+              Forgot password?
+            </Link>
+          </div>
+        </div>
 
         {error && (
           <div className="p-3 rounded-input bg-error/10 border border-error/20 text-error text-sm font-body">

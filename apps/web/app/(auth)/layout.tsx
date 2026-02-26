@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BookOpen } from "lucide-react";
+import DynamicSky from "@/components/sky/DynamicSky";
 
 export default function AuthLayout({
   children,
@@ -7,10 +8,8 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen gradient-dreamy flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      {/* Decorative orbs */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-deep-sky/5 blur-[100px]" />
-      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-golden-hour/5 blur-[80px]" />
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      <DynamicSky />
 
       <Link
         href="/"

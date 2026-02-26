@@ -26,7 +26,7 @@ export default function RegisterPage() {
       password,
       options: {
         data: { full_name: fullName },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?type=signup`,
       },
     });
 
@@ -36,8 +36,8 @@ export default function RegisterPage() {
       return;
     }
 
-    router.push("/dashboard");
-    router.refresh();
+    // Redirect to verify-email page with email for display
+    router.push(`/verify-email?email=${encodeURIComponent(email)}`);
   }
 
   async function handleGoogleSignUp() {
@@ -95,6 +95,13 @@ export default function RegisterPage() {
         <Button type="submit" fullWidth disabled={loading}>
           {loading ? "Creating account..." : "Create Account"}
         </Button>
+
+        <p className="text-xs font-body text-white/20 text-center leading-relaxed">
+          By creating an account, you agree to our{" "}
+          <a href="#" className="text-white/30 hover:text-white/50 underline">Terms</a>
+          {" "}and{" "}
+          <a href="#" className="text-white/30 hover:text-white/50 underline">Privacy Policy</a>.
+        </p>
       </form>
 
       <div className="relative my-6">
