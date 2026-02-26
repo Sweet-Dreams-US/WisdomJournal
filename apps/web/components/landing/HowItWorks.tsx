@@ -2,7 +2,6 @@
 
 import { MessageSquare, Archive, Search } from "lucide-react";
 import ScrollReveal from "@/components/animations/ScrollReveal";
-import FloatingOrbs from "@/components/animations/FloatingOrbs";
 
 const steps = [
   {
@@ -34,15 +33,9 @@ const steps = [
   },
 ];
 
-const orbConfigs = [
-  { color: "rgba(74, 144, 217, 0.06)", size: 300, x: "80%", y: "20%", blur: 80 },
-  { color: "rgba(245, 166, 35, 0.04)", size: 250, x: "10%", y: "60%", blur: 60 },
-];
-
 export default function HowItWorks() {
   return (
-    <section id="how-it-works" className="py-32 gradient-section-dark relative overflow-hidden">
-      <FloatingOrbs orbs={orbConfigs} />
+    <section id="how-it-works" className="py-32 relative overflow-hidden bg-black/10 backdrop-blur-sm">
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <ScrollReveal className="text-center mb-20">

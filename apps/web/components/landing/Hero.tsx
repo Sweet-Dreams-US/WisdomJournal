@@ -4,10 +4,6 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import gsap from "gsap";
 import Button from "@/components/ui/Button";
-import StarField from "@/components/animations/StarField";
-import FloatingOrbs from "@/components/animations/FloatingOrbs";
-import CloudsSVG from "@/components/animations/CloudsSVG";
-import MoonSVG from "@/components/animations/MoonSVG";
 
 export default function Hero() {
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -44,12 +40,7 @@ export default function Hero() {
   }, []);
 
   return (
-    <section className="gradient-hero min-h-screen flex items-center pt-16 relative overflow-hidden">
-      <StarField />
-      <FloatingOrbs />
-      <CloudsSVG />
-      <MoonSVG />
-
+    <section className="min-h-screen flex items-center pt-16 relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
           <div
@@ -98,9 +89,6 @@ export default function Hero() {
           </p>
         </div>
       </div>
-
-      {/* Bottom gradient fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#0f1525] to-transparent" />
     </section>
   );
 }

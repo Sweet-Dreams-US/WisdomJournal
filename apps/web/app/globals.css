@@ -143,4 +143,10 @@
   .animate-twinkle {
     animation: twinkle 3s ease-in-out infinite;
   }
+
+  /* Sky section glass overlay — subtle readability layer over dynamic sky */
+  .sky-section-glass {
+    background: rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(4px);
+  }
 }

@@ -9,7 +9,6 @@ import {
   Users,
 } from "lucide-react";
 import ScrollReveal from "@/components/animations/ScrollReveal";
-import FloatingOrbs from "@/components/animations/FloatingOrbs";
 
 const features = [
   {
@@ -56,15 +55,9 @@ const features = [
   },
 ];
 
-const orbConfigs = [
-  { color: "rgba(255, 126, 107, 0.04)", size: 350, x: "90%", y: "30%", blur: 90 },
-  { color: "rgba(74, 144, 217, 0.05)", size: 300, x: "5%", y: "70%", blur: 70 },
-];
-
 export default function Features() {
   return (
-    <section id="features" className="py-32 gradient-section-dark relative overflow-hidden">
-      <FloatingOrbs orbs={orbConfigs} />
+    <section id="features" className="py-32 relative overflow-hidden bg-black/10 backdrop-blur-sm">
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <ScrollReveal className="text-center mb-20">

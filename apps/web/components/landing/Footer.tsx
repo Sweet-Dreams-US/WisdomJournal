@@ -6,7 +6,6 @@ import { BookOpen } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Button from "@/components/ui/Button";
-import StarField from "@/components/animations/StarField";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -36,8 +35,7 @@ export default function Footer() {
   return (
     <footer>
       {/* CTA Section */}
-      <section ref={ctaRef} className="py-32 relative overflow-hidden gradient-dreamy">
-        <StarField />
+      <section ref={ctaRef} className="py-32 relative overflow-hidden bg-black/10 backdrop-blur-sm">
 
         {/* Decorative SVG shapes */}
         <svg className="absolute top-0 left-0 w-full h-full pointer-events-none" viewBox="0 0 1440 600" preserveAspectRatio="none" aria-hidden="true">
@@ -73,7 +71,7 @@ export default function Footer() {
       </section>
 
       {/* Bottom footer */}
-      <div className="bg-night-sky border-t border-white/5 py-8">
+      <div className="bg-black/20 backdrop-blur-md border-t border-white/5 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2">
