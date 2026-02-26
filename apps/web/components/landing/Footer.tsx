@@ -1,54 +1,102 @@
+"use client";
+
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { BookOpen } from "lucide-react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Button from "@/components/ui/Button";
+import StarField from "@/components/animations/StarField";
+
+gsap.registerPlugin(ScrollTrigger);
 
 export default function Footer() {
+  const ctaRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!ctaRef.current) return;
+
+    gsap.fromTo(
+      ctaRef.current.querySelectorAll(".cta-animate"),
+      { opacity: 0, y: 40 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.8,
+        stagger: 0.15,
+        ease: "power2.out",
+        scrollTrigger: {
+          trigger: ctaRef.current,
+          start: "top 80%",
+        },
+      }
+    );
+  }, []);
+
   return (
     <footer>
       {/* CTA Section */}
-      <section className="py-24 gradient-sky text-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-            Start preserving your wisdom today
+      <section ref={ctaRef} className="py-32 relative overflow-hidden gradient-dreamy">
+        <StarField />
+
+        {/* Decorative SVG shapes */}
+        <svg className="absolute top-0 left-0 w-full h-full pointer-events-none" viewBox="0 0 1440 600" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="ctaLine1" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="rgba(124,185,232,0)" />
+              <stop offset="50%" stopColor="rgba(124,185,232,0.1)" />
+              <stop offset="100%" stopColor="rgba(124,185,232,0)" />
+            </linearGradient>
+          </defs>
+          <line x1="0" y1="100" x2="1440" y2="100" stroke="url(#ctaLine1)" strokeWidth="1" />
+          <line x1="0" y1="500" x2="1440" y2="500" stroke="url(#ctaLine1)" strokeWidth="1" />
+          <circle cx="200" cy="300" r="150" fill="rgba(74,144,217,0.03)" />
+          <circle cx="1200" cy="200" r="200" fill="rgba(245,166,35,0.02)" />
+        </svg>
+
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+          <h2 className="cta-animate font-heading text-2xl sm:text-3xl text-white mb-6 text-glow">
+            Start Today
           </h2>
-          <p className="text-xl text-white/80 mb-10 max-w-2xl mx-auto">
+          <p className="cta-animate font-body text-base text-stardust/50 mb-12 max-w-xl mx-auto leading-relaxed">
             Every day that passes is wisdom that could be lost. Begin your
             journey of capturing what matters most.
           </p>
-          <Link href="/register">
-            <Button variant="secondary" size="lg">
-              Create Your Free Account
-            </Button>
-          </Link>
+          <div className="cta-animate">
+            <Link href="/register">
+              <Button variant="secondary" size="lg">
+                Create Your Free Account
+              </Button>
+            </Link>
+          </div>
         </div>
       </section>
 
-      {/* Footer links */}
-      <div className="bg-twilight text-white/70 py-12">
+      {/* Bottom footer */}
+      <div className="bg-night-sky border-t border-white/5 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2">
-              <BookOpen className="w-6 h-6 text-sky-blue" />
-              <span className="font-heading font-bold text-lg text-white">
-                Wisdom Journal
+              <BookOpen className="w-5 h-5 text-sky-blue" />
+              <span className="font-heading text-xs text-white">
+                Wisdom
               </span>
             </div>
 
-            <div className="flex items-center gap-6 text-sm">
-              <a href="#" className="hover:text-white transition-colors">
+            <div className="flex items-center gap-6">
+              <a href="#" className="font-body text-xs text-white/30 hover:text-white/60 transition-colors">
                 Privacy
               </a>
-              <a href="#" className="hover:text-white transition-colors">
+              <a href="#" className="font-body text-xs text-white/30 hover:text-white/60 transition-colors">
                 Terms
               </a>
-              <a href="#" className="hover:text-white transition-colors">
+              <a href="#" className="font-body text-xs text-white/30 hover:text-white/60 transition-colors">
                 Contact
               </a>
             </div>
 
-            <p className="text-sm">
-              &copy; {new Date().getFullYear()} Sweet Dreams Music LLC. All rights
-              reserved.
+            <p className="font-body text-xs text-white/20">
+              &copy; {new Date().getFullYear()} Sweet Dreams Music LLC
             </p>
           </div>
         </div>

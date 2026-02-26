@@ -8,7 +8,7 @@ import Footer from "@/components/landing/Footer";
 
 export default function LandingPage() {
   return (
-    <>
+    <div className="bg-night-sky">
       <Navbar />
       <main>
         <Hero />
@@ -18,6 +18,6 @@ export default function LandingPage() {
         <Pricing />
       </main>
       <Footer />
-    </>
+    </div>
   );
 }

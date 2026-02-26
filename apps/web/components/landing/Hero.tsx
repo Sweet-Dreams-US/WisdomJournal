@@ -1,48 +1,106 @@
+"use client";
+
+import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
+import gsap from "gsap";
 import Button from "@/components/ui/Button";
+import StarField from "@/components/animations/StarField";
+import FloatingOrbs from "@/components/animations/FloatingOrbs";
+import CloudsSVG from "@/components/animations/CloudsSVG";
+import MoonSVG from "@/components/animations/MoonSVG";
 
 export default function Hero() {
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const subRef = useRef<HTMLParagraphElement>(null);
+  const ctaRef = useRef<HTMLDivElement>(null);
+  const badgeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const tl = gsap.timeline({ delay: 0.5 });
+
+    tl.fromTo(
+      badgeRef.current,
+      { opacity: 0, y: 30, scale: 0.9 },
+      { opacity: 1, y: 0, scale: 1, duration: 0.8, ease: "back.out(1.7)" }
+    )
+      .fromTo(
+        headingRef.current,
+        { opacity: 0, y: 50 },
+        { opacity: 1, y: 0, duration: 1, ease: "power3.out" },
+        "-=0.3"
+      )
+      .fromTo(
+        subRef.current,
+        { opacity: 0, y: 30 },
+        { opacity: 1, y: 0, duration: 0.8, ease: "power2.out" },
+        "-=0.5"
+      )
+      .fromTo(
+        ctaRef.current,
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" },
+        "-=0.3"
+      );
+  }, []);
+
   return (
-    <section className="gradient-hero min-h-screen flex items-center pt-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="max-w-3xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 bg-white/60 backdrop-blur-sm rounded-full px-4 py-2 mb-8">
-            <Sparkles className="w-4 h-4 text-golden-hour" />
-            <span className="text-sm font-medium text-twilight">
+    <section className="gradient-hero min-h-screen flex items-center pt-16 relative overflow-hidden">
+      <StarField />
+      <FloatingOrbs />
+      <CloudsSVG />
+      <MoonSVG />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative z-10">
+        <div className="max-w-4xl mx-auto text-center">
+          <div
+            ref={badgeRef}
+            className="inline-flex items-center gap-2 glass-card rounded-full px-5 py-2.5 mb-10"
+          >
+            <div className="w-2 h-2 rounded-full bg-golden-hour animate-pulse-glow" />
+            <span className="text-xs font-body font-medium text-stardust tracking-widest uppercase">
               AI-powered wisdom preservation
             </span>
           </div>
 
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-twilight leading-tight mb-6">
-            Your wisdom deserves to{" "}
-            <span className="text-deep-sky">live forever</span>
+          <h1
+            ref={headingRef}
+            className="font-heading text-3xl sm:text-4xl lg:text-5xl text-white leading-tight mb-8 text-glow"
+          >
+            Your Wisdom
+            <br />
+            <span className="text-golden-hour text-glow-gold">Lives Forever</span>
           </h1>
 
-          <p className="text-xl sm:text-2xl text-charcoal/70 mb-10 leading-relaxed">
+          <p
+            ref={subRef}
+            className="font-body text-base sm:text-lg text-stardust/70 mb-12 leading-relaxed max-w-2xl mx-auto font-light"
+          >
             Answer daily questions. Build a living archive of your knowledge,
             stories, and values. Let your loved ones ask your wisdom anything
             &mdash; even when you&apos;re not there.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div ref={ctaRef} className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href="/register">
               <Button size="lg">
-                Start Preserving Your Wisdom
+                Begin Your Legacy
               </Button>
             </Link>
             <a href="#how-it-works">
               <Button variant="outline" size="lg">
-                Learn More
+                Explore
               </Button>
             </a>
           </div>
 
-          <p className="mt-6 text-sm text-warm-gray">
-            Free to start. No credit card required.
+          <p className="mt-8 text-xs font-body text-white/30 tracking-wider">
+            Free to start &middot; No credit card required
           </p>
         </div>
       </div>
+
+      {/* Bottom gradient fade */}
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#0f1525] to-transparent" />
     </section>
   );
 }

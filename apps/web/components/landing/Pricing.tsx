@@ -1,7 +1,9 @@
+"use client";
+
 import { Check } from "lucide-react";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
-import Card from "@/components/ui/Card";
+import ScrollReveal from "@/components/animations/ScrollReveal";
 import { SUBSCRIPTION_TIERS } from "@wisdom-journal/shared";
 
 const tiers = [
@@ -12,68 +14,71 @@ const tiers = [
 
 export default function Pricing() {
   return (
-    <section id="pricing" className="py-24 bg-soft-gray">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold text-twilight mb-4">
-            Simple, Honest Pricing
+    <section id="pricing" className="py-32 gradient-section-mid relative overflow-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <ScrollReveal className="text-center mb-20">
+          <h2 className="font-heading text-2xl sm:text-3xl text-white mb-4 text-glow">
+            Pricing
           </h2>
-          <p className="text-lg text-charcoal/60 max-w-2xl mx-auto">
+          <p className="font-body text-sm text-stardust/50 max-w-lg mx-auto tracking-wide">
             Start free. Upgrade when you&apos;re ready.
           </p>
-        </div>
+        </ScrollReveal>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-          {tiers.map(({ key, popular }) => {
+        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          {tiers.map(({ key, popular }, index) => {
             const tier = SUBSCRIPTION_TIERS[key];
             return (
-              <Card
-                key={key}
-                padding="lg"
-                className={`relative ${
-                  popular
-                    ? "border-2 border-deep-sky ring-1 ring-deep-sky/20"
-                    : "border border-soft-gray"
-                }`}
-              >
-                {popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-deep-sky text-white text-xs font-bold px-3 py-1 rounded-full">
-                    Most Popular
-                  </div>
-                )}
+              <ScrollReveal key={key} delay={index * 0.15} direction="up">
+                <div
+                  className={`
+                    rounded-2xl p-8 relative h-full flex flex-col
+                    ${popular
+                      ? "glass-card border-sky-blue/30 glow-blue"
+                      : "glass-card"
+                    }
+                    hover:border-white/15 transition-all duration-500
+                  `}
+                >
+                  {popular && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-deep-sky to-sky-blue text-white text-[10px] font-body font-bold px-4 py-1.5 rounded-full tracking-widest uppercase">
+                      Popular
+                    </div>
+                  )}
 
-                <div className="text-center mb-8">
-                  <h3 className="text-xl font-bold text-twilight mb-2">
-                    {tier.name}
-                  </h3>
-                  <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-4xl font-extrabold text-twilight">
-                      ${tier.price}
-                    </span>
-                    {tier.price > 0 && (
-                      <span className="text-warm-gray">/month</span>
-                    )}
+                  <div className="text-center mb-8">
+                    <h3 className="font-body text-lg font-bold text-white mb-3">
+                      {tier.name}
+                    </h3>
+                    <div className="flex items-baseline justify-center gap-1">
+                      <span className="font-body text-4xl font-bold text-white">
+                        ${tier.price}
+                      </span>
+                      {tier.price > 0 && (
+                        <span className="font-body text-sm text-white/30">/mo</span>
+                      )}
+                    </div>
                   </div>
+
+                  <ul className="space-y-3 mb-8 flex-1">
+                    {tier.features.map((feature) => (
+                      <li key={feature} className="flex items-start gap-3">
+                        <Check className="w-4 h-4 text-success shrink-0 mt-0.5" />
+                        <span className="font-body text-sm text-white/40">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Link href="/register" className="block">
+                    <Button
+                      variant={popular ? "primary" : "outline"}
+                      fullWidth
+                    >
+                      {tier.price === 0 ? "Start Free" : "Free Trial"}
+                    </Button>
+                  </Link>
                 </div>
-
-                <ul className="space-y-3 mb-8">
-                  {tier.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-3">
-                      <Check className="w-5 h-5 text-success shrink-0 mt-0.5" />
-                      <span className="text-charcoal/70">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <Link href="/register" className="block">
-                  <Button
-                    variant={popular ? "primary" : "outline"}
-                    fullWidth
-                  >
-                    {tier.price === 0 ? "Get Started Free" : "Start Free Trial"}
-                  </Button>
-                </Link>
-              </Card>
+              </ScrollReveal>
             );
           })}
         </div>

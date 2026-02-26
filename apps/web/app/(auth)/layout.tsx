@@ -7,17 +7,21 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen gradient-hero flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen gradient-dreamy flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {/* Decorative orbs */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-deep-sky/5 blur-[100px]" />
+      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-golden-hour/5 blur-[80px]" />
+
       <Link
         href="/"
-        className="flex items-center gap-2 mb-8"
+        className="flex items-center gap-2 mb-10 relative z-10"
       >
-        <BookOpen className="w-10 h-10 text-deep-sky" />
-        <span className="font-heading font-bold text-2xl text-twilight">
-          Wisdom Journal
+        <BookOpen className="w-8 h-8 text-sky-blue" />
+        <span className="font-heading text-lg text-white">
+          Wisdom
         </span>
       </Link>
-      {children}
+      <div className="relative z-10 w-full max-w-md">{children}</div>
     </div>
   );
 }

@@ -17,10 +17,16 @@ const config: Config = {
         "golden-hour": "#F5A623",
         "sunrise-coral": "#FF7E6B",
 
+        // Dark dreamy palette
+        "night-sky": "#0a0e1a",
+        "deep-night": "#111b33",
+        "midnight": "#1a2a4a",
+        "stardust": "#c5d5f0",
+
         // Neutrals
         "soft-gray": "#F0F2F5",
         "warm-gray": "#9BA3AF",
-        "charcoal": "#2D3748",
+        charcoal: "#2D3748",
 
         // Semantic
         success: "#68D391",
@@ -28,8 +34,8 @@ const config: Config = {
         error: "#FC8181",
       },
       fontFamily: {
-        heading: ["Nunito", "sans-serif"],
-        body: ["Nunito Sans", "sans-serif"],
+        heading: ['"Bungee Shade"', "sans-serif"],
+        body: ['"IBM Plex Mono"', "monospace"],
       },
       borderRadius: {
         card: "16px",
@@ -40,6 +46,8 @@ const config: Config = {
         card: "0 2px 12px rgba(44, 62, 107, 0.08)",
         "card-hover": "0 4px 20px rgba(44, 62, 107, 0.12)",
         button: "0 2px 8px rgba(74, 144, 217, 0.25)",
+        glow: "0 0 30px rgba(74, 144, 217, 0.2)",
+        "glow-lg": "0 0 60px rgba(74, 144, 217, 0.3)",
       },
       spacing: {
         18: "4.5rem",
