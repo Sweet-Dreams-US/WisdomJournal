@@ -1,0 +1,117 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { embedResponse } from "@/lib/ai/embeddings";
+
+export async function POST(request: NextRequest) {
+  const supabase = createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await request.json();
+  const {
+    question_id,
+    daily_item_id,
+    response_text,
+    category_id,
+    subcategory_id,
+    group_id,
+    mood,
+    tags,
+  } = body;
+
+  if (!response_text?.trim()) {
+    return NextResponse.json(
+      { error: "Response text is required" },
+      { status: 400 }
+    );
+  }
+
+  // Insert response
+  const { data: response, error: responseError } = await supabase
+    .from("responses")
+    .insert({
+      user_id: user.id,
+      question_id: question_id || null,
+      group_id: group_id || null,
+      response_text: response_text.trim(),
+      input_method: "text",
+      response_context: group_id ? "organization" : "personal",
+      mood: mood || null,
+      tags: tags || [],
+    })
+    .select()
+    .single();
+
+  if (responseError) {
+    return NextResponse.json(
+      { error: responseError.message },
+      { status: 500 }
+    );
+  }
+
+  // Insert response_categories (primary tag)
+  if (category_id) {
+    await supabase.from("response_categories").insert({
+      response_id: response.id,
+      category_id,
+      subcategory_id: subcategory_id || null,
+      source: "primary",
+    });
+  }
+
+  // Update daily question item if provided
+  if (daily_item_id) {
+    await supabase
+      .from("daily_question_items")
+      .update({ response_id: response.id })
+      .eq("id", daily_item_id);
+
+    // Check if all items are done → update set status
+    const { data: setItems } = await supabase
+      .from("daily_question_items")
+      .select("response_id, skipped")
+      .eq("set_id", body.set_id);
+
+    if (setItems) {
+      const allDone = setItems.every(
+        (item: any) => item.response_id !== null || item.skipped
+      );
+      const anyDone = setItems.some(
+        (item: any) => item.response_id !== null
+      );
+
+      await supabase
+        .from("daily_question_sets")
+        .update({
+          status: allDone ? "completed" : anyDone ? "partial" : "pending",
+        })
+        .eq("id", body.set_id);
+    }
+  }
+
+  // Update question history
+  if (question_id) {
+    await supabase
+      .from("user_question_history")
+      .upsert(
+        {
+          user_id: user.id,
+          question_id,
+          answered: true,
+          shown_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id,question_id" }
+      );
+  }
+
+  // Generate embedding asynchronously (don't block response)
+  embedResponse(response.id, response_text.trim()).catch(console.error);
+
+  return NextResponse.json({ response }, { status: 201 });
+}

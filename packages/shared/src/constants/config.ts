@@ -37,6 +37,18 @@ export const SUBSCRIPTION_TIERS = {
       "Custom question categories",
     ],
   },
+  enterprise: {
+    name: "Enterprise",
+    price: null,
+    features: [
+      "Everything in Premium",
+      "Organization groups",
+      "Admin dashboard",
+      "SSO integration",
+      "Custom branding",
+      "Dedicated support",
+    ],
+  },
 } as const;
 
 export const NAV_ITEMS = [

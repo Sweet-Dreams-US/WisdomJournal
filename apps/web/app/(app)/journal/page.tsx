@@ -1,30 +1,29 @@
-import { BookOpen } from "lucide-react";
-import Card from "@/components/ui/Card";
+import { Suspense } from "react";
+import { getResponses } from "@/lib/data/get-responses";
+import JournalClient from "./JournalClient";
 
-export default function JournalPage() {
+export default async function JournalPage() {
+  const responses = await getResponses();
+
   return (
-    <div className="max-w-4xl">
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-twilight mb-2">
-          Your Wisdom Journal
-        </h2>
-        <p className="text-charcoal/60">
-          Browse and revisit your past responses.
-        </p>
-      </div>
+    <Suspense fallback={<JournalSkeleton />}>
+      <JournalClient initialResponses={responses} />
+    </Suspense>
+  );
+}
 
-      <Card padding="lg">
-        <div className="text-center py-12">
-          <BookOpen className="w-16 h-16 text-deep-sky mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-twilight mb-2">
-            No Entries Yet
-          </h3>
-          <p className="text-charcoal/60 max-w-md mx-auto">
-            Once you start answering daily questions, your responses will
-            appear here as a searchable archive of your wisdom.
-          </p>
-        </div>
-      </Card>
+function JournalSkeleton() {
+  return (
+    <div className="max-w-4xl animate-pulse">
+      <div className="h-8 w-64 bg-soft-gray rounded mb-2" />
+      <div className="h-5 w-80 bg-soft-gray rounded mb-6" />
+      <div className="h-14 bg-soft-gray rounded-xl mb-4" />
+      <div className="h-10 bg-soft-gray rounded mb-4" />
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-32 bg-soft-gray rounded-card" />
+        ))}
+      </div>
     </div>
   );
 }
