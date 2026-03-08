@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Sun, BookOpen, MessageCircle, User, LogOut, Users, X, Flame } from "lucide-react";
+import { Sun, BookOpen, MessageCircle, User, LogOut, Users, X, Flame, Globe } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useSidebar } from "./SidebarProvider";
@@ -12,6 +12,7 @@ import { useProfile } from "@/lib/hooks/use-profile";
 const navItems = [
   { label: "Today", href: "/dashboard", icon: Sun, showStreak: true },
   { label: "Journal", href: "/journal", icon: BookOpen },
+  { label: "Encyclopedia", href: "/encyclopedia", icon: Globe },
   { label: "Ask", href: "/ask", icon: MessageCircle },
   { label: "Groups", href: "/groups", icon: Users },
   { label: "Profile", href: "/profile", icon: User },
