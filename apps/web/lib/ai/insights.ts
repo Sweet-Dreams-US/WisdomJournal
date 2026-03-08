@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { chatCompletion } from "./openrouter";
+import { chatCompletion, AI_MODELS } from "./openrouter";
 
 /**
  * Generate AI insights for a saved response.
@@ -41,7 +41,7 @@ Rules:
         },
       ],
       {
-        model: "anthropic/claude-sonnet-4.6",
+        model: AI_MODELS.FAST,
         maxTokens: 150,
         temperature: 0.2,
       }

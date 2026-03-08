@@ -5,6 +5,16 @@
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 
+/**
+ * Model tiers:
+ * - FAST: Simple extraction (insights, themes, sentiment). Cheapest option.
+ * - STANDARD: Wisdom queries with full RAG context. Quality matters here.
+ */
+export const AI_MODELS = {
+  FAST: "google/gemini-3.1-flash-lite-preview",   // ~$0.25/M input — simple JSON extraction
+  STANDARD: "anthropic/claude-sonnet-4.6",          // Quality for wisdom queries with big context
+} as const;
+
 interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
@@ -30,7 +40,7 @@ export async function chatCompletion(
     throw new Error("OPENROUTER_API_KEY is not set");
   }
 
-  const model = options.model ?? "anthropic/claude-sonnet-4.6";
+  const model = options.model ?? AI_MODELS.STANDARD;
 
   const response = await fetch(OPENROUTER_API_URL, {
     method: "POST",

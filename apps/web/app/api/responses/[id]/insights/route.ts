@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { chatCompletion } from "@/lib/ai/openrouter";
+import { chatCompletion, AI_MODELS } from "@/lib/ai/openrouter";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 
 export async function POST(
@@ -57,7 +57,7 @@ Rules:
         },
       ],
       {
-        model: "anthropic/claude-sonnet-4.6",
+        model: AI_MODELS.FAST,
         maxTokens: 150,
         temperature: 0.2,
       }
