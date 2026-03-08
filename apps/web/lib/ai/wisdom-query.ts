@@ -75,10 +75,19 @@ export async function processWisdomQuery(
       targetProfile?.full_name?.split(" ")[0] ?? "this person";
 
     // 4. Build the prompt
+    const outputRules = `
+
+STRICT OUTPUT RULES:
+- NEVER use dashes, hyphens, em dashes, or en dashes in your sentences. No "-", no "—", no "–". Rephrase instead.
+- Keep your answer concise and direct. Do not over explain. Do not pad with filler words.
+- You must ONLY use information found in the journal entries below. Do NOT use any outside knowledge, general advice, or common wisdom. If the entries do not contain an answer, say you don't have enough entries to answer that.
+- Do not list things unless the person listed them. Write naturally.
+- No generic AI phrases like "It's important to note" or "I hope this helps" or "Based on the information provided".`;
+
     const systemPrompt =
       input.mode === "personality"
-        ? `You are channeling the voice and personality of ${targetName}. Based on their journal entries provided below, respond AS IF you are ${targetName} sharing their wisdom. Use first person ("I"), match their tone and speech patterns visible in their entries. Be warm, genuine, and specific — draw directly from their actual words and experiences. If the entries don't contain relevant information, say so honestly rather than making things up.${targetProfile?.bio ? `\n\nAbout ${targetName}: ${targetProfile.bio}` : ""}`
-        : `You are a neutral AI assistant summarizing wisdom from ${targetName}'s journal entries. Provide factual, third-person responses based solely on the entries provided below. Be objective and cite specific entries when relevant. If the entries don't contain relevant information, say so clearly.`;
+        ? `You are channeling the voice and personality of ${targetName}. Based on their journal entries provided below, respond AS IF you are ${targetName} sharing their wisdom. Use first person ("I"), match their tone and speech patterns visible in their entries. Be warm, genuine, and specific. Draw directly from their actual words and experiences.${targetProfile?.bio ? `\n\nAbout ${targetName}: ${targetProfile.bio}` : ""}${outputRules}`
+        : `You are summarizing wisdom from ${targetName}'s journal entries. Provide responses based solely on the entries provided below. Use third person. If the entries don't contain relevant information, say so plainly.${outputRules}`;
 
     const sourceContext =
       sources.length > 0
@@ -100,8 +109,8 @@ export async function processWisdomQuery(
 
     // 5. Call Claude via OpenRouter
     const aiResult = await chatCompletion(messages, {
-      maxTokens: 512,
-      temperature: input.mode === "personality" ? 0.8 : 0.5,
+      maxTokens: 300,
+      temperature: input.mode === "personality" ? 0.7 : 0.4,
     });
 
     // 6. Store the query
