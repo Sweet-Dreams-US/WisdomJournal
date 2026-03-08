@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
     group_id,
     mood,
     tags,
+    input_method,
   } = body;
 
   if (!response_text?.trim()) {
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
       question_id: question_id || null,
       group_id: group_id || null,
       response_text: response_text.trim(),
-      input_method: "text",
+      input_method: input_method || "text",
       response_context: group_id ? "organization" : "personal",
       mood: mood || null,
       tags: tags || [],

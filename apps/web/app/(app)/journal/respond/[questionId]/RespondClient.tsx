@@ -2,12 +2,12 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, SkipForward, Mic, Check } from "lucide-react";
+import { ArrowLeft, SkipForward, Check, Keyboard, Mic } from "lucide-react";
 import Link from "next/link";
 import Card from "@/components/ui/Card";
 import CategoryBadge from "@/components/ui/CategoryBadge";
-import ResponseEditor from "@/components/ui/ResponseEditor";
 import Button from "@/components/ui/Button";
+import VoiceRecorder from "@/components/app/VoiceRecorder";
 import type { Question } from "@wisdom-journal/shared";
 import gsap from "gsap";
 
@@ -35,7 +35,10 @@ export default function RespondClient({
   const [showSkipConfirm, setShowSkipConfirm] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [inputMode, setInputMode] = useState<"voice" | "text">("voice");
   const checkRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
 
@@ -50,16 +53,28 @@ export default function RespondClient({
           duration: 0.5,
           ease: "back.out(1.7)",
           onComplete: () => {
-            setTimeout(() => router.push("/dashboard"), 1000);
+            setTimeout(() => {
+              router.push("/dashboard");
+              router.refresh();
+            }, 1000);
           },
         }
       );
     }
   }, [saved, router]);
 
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current && inputMode === "text") {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
+    }
+  }, [text, inputMode]);
+
   async function handleSave() {
     if (saving || wordCount === 0) return;
     setSaving(true);
+    setSaveError(null);
 
     try {
       const res = await fetch("/api/responses", {
@@ -72,6 +87,7 @@ export default function RespondClient({
           response_text: text.trim(),
           category_id: question.category_id,
           subcategory_id: question.subcategory_id,
+          input_method: inputMode === "voice" ? "voice" : "text",
         }),
       });
 
@@ -79,11 +95,11 @@ export default function RespondClient({
         setSaved(true);
       } else {
         const err = await res.json();
-        console.error("Save failed:", err);
+        setSaveError(err.error || "Failed to save. Please try again.");
         setSaving(false);
       }
     } catch (error) {
-      console.error("Save error:", error);
+      setSaveError("Network error. Please check your connection and try again.");
       setSaving(false);
     }
   }
@@ -99,6 +115,11 @@ export default function RespondClient({
       }),
     });
     router.push("/dashboard");
+    router.refresh();
+  }
+
+  function handleTranscript(transcript: string) {
+    setText(transcript);
   }
 
   if (saved) {
@@ -142,7 +163,7 @@ export default function RespondClient({
       {showSkipConfirm && (
         <Card padding="md" className="mb-4 border border-warning/30 bg-warning/5">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-charcoal">Are you sure you want to skip this question?</p>
+            <p className="text-sm text-charcoal">Skip this question?</p>
             <div className="flex gap-2">
               <button
                 onClick={() => setShowSkipConfirm(false)}
@@ -171,22 +192,83 @@ export default function RespondClient({
         </p>
       </Card>
 
-      {/* Editor */}
-      <ResponseEditor value={text} onChange={setText} />
+      {/* Voice recorder (primary) */}
+      {inputMode === "voice" && (
+        <Card padding="lg" className="mb-4">
+          <VoiceRecorder onTranscript={handleTranscript} disabled={saving} />
+        </Card>
+      )}
 
-      {/* Footer */}
-      <div className="sticky bottom-0 bg-cloud-white py-4 mt-4 flex items-center justify-between border-t border-soft-gray -mx-4 px-4 md:-mx-8 md:px-8">
-        <div className="flex items-center gap-4">
-          <span className="text-xs text-charcoal/40">{wordCount} words</span>
-          <button
-            disabled
-            className="inline-flex items-center gap-1 text-xs text-charcoal/30 cursor-not-allowed"
-            title="Voice recording coming soon"
-          >
-            <Mic className="w-4 h-4" />
-            Voice (coming soon)
-          </button>
-        </div>
+      {/* Transcript / text display */}
+      {inputMode === "voice" && text && (
+        <Card padding="md" className="mb-4">
+          <label className="text-xs text-charcoal/40 font-body mb-2 block">
+            Your words
+          </label>
+          <p className="text-charcoal leading-relaxed font-body whitespace-pre-wrap">
+            {text}
+          </p>
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-soft-gray">
+            <span className="text-xs text-charcoal/40 font-body">
+              {wordCount} words
+            </span>
+            <button
+              onClick={() => setText("")}
+              className="text-xs text-charcoal/40 hover:text-charcoal transition-colors font-body"
+            >
+              Clear and re-record
+            </button>
+          </div>
+        </Card>
+      )}
+
+      {/* Text input mode (secondary) */}
+      {inputMode === "text" && (
+        <Card padding="md" className="mb-4">
+          <textarea
+            ref={textareaRef}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Type your response..."
+            className="w-full min-h-[150px] resize-none bg-transparent text-charcoal font-body leading-relaxed focus:outline-none placeholder:text-charcoal/30"
+          />
+          <div className="flex items-center justify-between pt-3 border-t border-soft-gray">
+            <span className="text-xs text-charcoal/40 font-body">
+              {wordCount} words
+            </span>
+          </div>
+        </Card>
+      )}
+
+      {/* Mode toggle */}
+      <div className="flex justify-center mb-4">
+        <button
+          onClick={() => setInputMode(inputMode === "voice" ? "text" : "voice")}
+          className="inline-flex items-center gap-2 text-xs text-charcoal/40 hover:text-charcoal/60 transition-colors font-body"
+        >
+          {inputMode === "voice" ? (
+            <>
+              <Keyboard className="w-3.5 h-3.5" />
+              Switch to typing
+            </>
+          ) : (
+            <>
+              <Mic className="w-3.5 h-3.5" />
+              Switch to voice
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Error */}
+      {saveError && (
+        <Card padding="md" className="mb-4 border border-error/30 bg-error/5">
+          <p className="text-sm text-error">{saveError}</p>
+        </Card>
+      )}
+
+      {/* Save button */}
+      <div className="sticky bottom-0 bg-cloud-white py-4 flex justify-end border-t border-soft-gray -mx-4 px-4 md:-mx-8 md:px-8">
         <Button
           onClick={handleSave}
           disabled={wordCount === 0 || saving}
