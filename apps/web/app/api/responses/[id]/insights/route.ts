@@ -57,7 +57,7 @@ Rules:
         },
       ],
       {
-        model: "anthropic/claude-haiku-3-20240307",
+        model: "anthropic/claude-sonnet-4.6",
         maxTokens: 150,
         temperature: 0.2,
       }

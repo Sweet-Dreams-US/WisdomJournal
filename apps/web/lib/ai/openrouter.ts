@@ -30,7 +30,7 @@ export async function chatCompletion(
     throw new Error("OPENROUTER_API_KEY is not set");
   }
 
-  const model = options.model ?? "anthropic/claude-sonnet-4-5-20250514";
+  const model = options.model ?? "anthropic/claude-sonnet-4.6";
 
   const response = await fetch(OPENROUTER_API_URL, {
     method: "POST",
