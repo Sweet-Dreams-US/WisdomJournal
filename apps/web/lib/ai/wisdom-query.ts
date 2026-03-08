@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { chatCompletion, generateEmbedding } from "./openrouter";
 
 interface WisdomQueryInput {
@@ -20,11 +21,10 @@ export interface WisdomQueryResult {
 
 /**
  * Process a wisdom query using RAG:
- * 1. Embed the query text
- * 2. Search accessible responses via vector similarity
- * 3. Build prompt with source context
- * 4. Call Claude Sonnet via OpenRouter
- * 5. Store the query and return results
+ * 1. Try vector search, fall back to recent responses
+ * 2. Build prompt with source context
+ * 3. Call Claude Sonnet via OpenRouter
+ * 4. Store the query and return results
  */
 export async function processWisdomQuery(
   input: WisdomQueryInput
@@ -32,49 +32,81 @@ export async function processWisdomQuery(
   const supabase = createClient();
 
   try {
-    // 1. Generate embedding for the query
-    const queryEmbedding = await generateEmbedding(input.queryText);
+    let sources: { id: string; text: string; category_slug: string }[] = [];
 
-    if (queryEmbedding.length !== 1536) {
-      return {
-        ai_response: "",
-        source_count: 0,
-        source_response_ids: [],
-        sources: [],
-        error: "Failed to generate query embedding",
-      };
+    // Try vector search first
+    try {
+      const queryEmbedding = await generateEmbedding(input.queryText);
+
+      if (queryEmbedding.length === 1536) {
+        const embeddingStr = `[${queryEmbedding.join(",")}]`;
+
+        // Use service role for RPC to bypass RLS on embeddings
+        const admin = createServiceClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_ROLE_KEY!
+        );
+
+        const { data: searchResults, error: rpcError } = await admin.rpc(
+          "search_accessible_responses",
+          {
+            p_querier_id: input.querierId,
+            p_target_user_id: input.targetUserId,
+            p_query_embedding: embeddingStr,
+            p_match_threshold: 0.5,
+            p_match_count: 8,
+          }
+        );
+
+        if (rpcError) {
+          console.error("Vector search RPC error:", rpcError);
+        }
+
+        if (searchResults && searchResults.length > 0) {
+          sources = searchResults.map((r: any) => ({
+            id: r.response_id,
+            text: r.response_text,
+            category_slug: r.category_slug ?? "unknown",
+          }));
+        }
+      }
+    } catch (embedError) {
+      console.error("Embedding/vector search failed, falling back:", embedError);
     }
 
-    // 2. Search accessible responses
-    const embeddingStr = `[${queryEmbedding.join(",")}]`;
-    const { data: searchResults } = await supabase.rpc(
-      "search_accessible_responses",
-      {
-        p_querier_id: input.querierId,
-        p_target_user_id: input.targetUserId,
-        p_query_embedding: embeddingStr,
-        p_match_threshold: 0.6,
-        p_match_count: 8,
+    // Fallback: if no vector results, fetch recent responses directly
+    if (sources.length === 0) {
+      const { data: recentResponses } = await supabase
+        .from("responses")
+        .select(`
+          id, response_text,
+          categories:response_categories(category:categories(slug))
+        `)
+        .eq("user_id", input.targetUserId)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .limit(8);
+
+      if (recentResponses && recentResponses.length > 0) {
+        sources = recentResponses.map((r: any) => ({
+          id: r.id,
+          text: r.response_text,
+          category_slug: r.categories?.[0]?.category?.slug ?? "unknown",
+        }));
       }
-    );
+    }
 
-    const sources = (searchResults ?? []).map((r: any) => ({
-      id: r.response_id,
-      text: r.response_text,
-      category_slug: r.category_slug,
-    }));
-
-    // 3. Get target user's name for personality mode
+    // Get target user's name
     const { data: targetProfile } = await supabase
       .from("profiles")
       .select("full_name, bio")
       .eq("id", input.targetUserId)
-      .single();
+      .maybeSingle();
 
     const targetName =
       targetProfile?.full_name?.split(" ")[0] ?? "this person";
 
-    // 4. Build the prompt
+    // Build the prompt
     const outputRules = `
 
 STRICT OUTPUT RULES:
@@ -89,15 +121,21 @@ STRICT OUTPUT RULES:
         ? `You are channeling the voice and personality of ${targetName}. Based on their journal entries provided below, respond AS IF you are ${targetName} sharing their wisdom. Use first person ("I"), match their tone and speech patterns visible in their entries. Be warm, genuine, and specific. Draw directly from their actual words and experiences.${targetProfile?.bio ? `\n\nAbout ${targetName}: ${targetProfile.bio}` : ""}${outputRules}`
         : `You are summarizing wisdom from ${targetName}'s journal entries. Provide responses based solely on the entries provided below. Use third person. If the entries don't contain relevant information, say so plainly.${outputRules}`;
 
-    const sourceContext =
-      sources.length > 0
-        ? sources
-            .map(
-              (s: any, i: number) =>
-                `[Entry ${i + 1}] (Category: ${s.category_slug})\n${s.text}`
-            )
-            .join("\n\n")
-        : "No relevant journal entries were found.";
+    if (sources.length === 0) {
+      return {
+        ai_response: "You don't have any journal entries yet. Answer some daily questions first, then come back and ask about your wisdom.",
+        source_count: 0,
+        source_response_ids: [],
+        sources: [],
+      };
+    }
+
+    const sourceContext = sources
+      .map(
+        (s, i) =>
+          `[Entry ${i + 1}] (Category: ${s.category_slug})\n${s.text}`
+      )
+      .join("\n\n");
 
     const messages = [
       { role: "system" as const, content: systemPrompt },
@@ -107,14 +145,14 @@ STRICT OUTPUT RULES:
       },
     ];
 
-    // 5. Call Claude via OpenRouter
+    // Call Claude via OpenRouter
     const aiResult = await chatCompletion(messages, {
       maxTokens: 300,
       temperature: input.mode === "personality" ? 0.7 : 0.4,
     });
 
-    // 6. Store the query
-    const sourceIds = sources.map((s: any) => s.id);
+    // Store the query
+    const sourceIds = sources.map((s) => s.id);
     const costCents = Math.ceil(
       (aiResult.tokens_input * 0.003 + aiResult.tokens_output * 0.015) / 10
     );

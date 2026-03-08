@@ -195,7 +195,7 @@ export default function RespondClient({
       {/* Voice recorder (primary) */}
       {inputMode === "voice" && (
         <Card padding="lg" className="mb-4">
-          <VoiceRecorder onTranscript={handleTranscript} disabled={saving} />
+          <VoiceRecorder onTranscript={handleTranscript} currentText={text} disabled={saving} />
         </Card>
       )}
 
