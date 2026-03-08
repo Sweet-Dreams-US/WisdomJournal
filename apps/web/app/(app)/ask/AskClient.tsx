@@ -10,6 +10,7 @@ import type { UserProfile, WisdomQuery } from "@wisdom-journal/shared";
 type QueryMode = "personality" | "neutral";
 
 interface AiResult {
+  id?: string;
   ai_response: string;
   source_count: number;
   source_response_ids: string[];
@@ -29,6 +30,7 @@ export default function AskClient({ profile, pastQueries }: AskClientProps) {
   const [rating, setRating] = useState(0);
   const [showSources, setShowSources] = useState(false);
   const [showHistory, setShowHistory] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const firstName = profile.full_name?.split(" ")[0] ?? "your";
 
@@ -38,6 +40,7 @@ export default function AskClient({ profile, pastQueries }: AskClientProps) {
     setLoading(true);
     setResult(null);
     setRating(0);
+    setError(null);
 
     try {
       const res = await fetch("/api/wisdom/query", {
@@ -51,12 +54,16 @@ export default function AskClient({ profile, pastQueries }: AskClientProps) {
 
       const data = await res.json();
       if (res.ok) {
-        setResult(data);
+        if (data.ai_response) {
+          setResult(data);
+        } else {
+          setError("No response was generated. Try a different question or add more journal entries first.");
+        }
       } else {
-        console.error("Query failed:", data.error);
+        setError(data.error || "Something went wrong. Please try again.");
       }
-    } catch (error) {
-      console.error("Query error:", error);
+    } catch (err) {
+      setError("Network error. Please check your connection and try again.");
     } finally {
       setLoading(false);
     }
@@ -64,7 +71,17 @@ export default function AskClient({ profile, pastQueries }: AskClientProps) {
 
   async function handleRate(stars: number) {
     setRating(stars);
-    // TODO: Could call an API to update the rating on the wisdom_queries record
+    if (result?.id) {
+      try {
+        await fetch("/api/wisdom/rate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query_id: result.id, rating: stars }),
+        });
+      } catch {
+        // Silent fail for rating
+      }
+    }
   }
 
   return (
@@ -137,6 +154,13 @@ export default function AskClient({ profile, pastQueries }: AskClientProps) {
           </Button>
         </div>
       </form>
+
+      {/* Error */}
+      {error && !loading && (
+        <Card padding="md" className="mb-6 border border-error/30 bg-error/5">
+          <p className="text-sm text-error">{error}</p>
+        </Card>
+      )}
 
       {/* Loading skeleton */}
       {loading && (

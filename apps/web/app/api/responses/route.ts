@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { embedResponse } from "@/lib/ai/embeddings";
-import { generateResponseInsights } from "@/lib/ai/insights";
 
 export async function POST(request: NextRequest) {
   const supabase = createClient();
@@ -112,20 +111,8 @@ export async function POST(request: NextRequest) {
       );
   }
 
-  // Get question text for AI context (if available)
-  let questionText: string | undefined;
-  if (question_id) {
-    const { data: q } = await supabase
-      .from("questions")
-      .select("text")
-      .eq("id", question_id)
-      .maybeSingle();
-    questionText = q?.text;
-  }
-
-  // Generate embedding and AI insights asynchronously (don't block response)
+  // Generate embedding asynchronously (don't block response)
   embedResponse(response.id, response_text.trim()).catch(console.error);
-  generateResponseInsights(response.id, response_text.trim(), questionText).catch(console.error);
 
   return NextResponse.json({ response }, { status: 201 });
 }
