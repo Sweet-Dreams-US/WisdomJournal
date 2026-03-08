@@ -40,6 +40,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export async function getKnowledgeWebData(): Promise<KnowledgeWebData | null> {
+  try {
   const supabase = createClient();
 
   const {
@@ -167,4 +168,8 @@ export async function getKnowledgeWebData(): Promise<KnowledgeWebData | null> {
     totalWords: profile?.total_word_count ?? 0,
     categoriesCovered,
   };
+  } catch (error) {
+    console.error("getKnowledgeWebData error:", error);
+    return null;
+  }
 }

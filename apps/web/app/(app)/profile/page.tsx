@@ -6,15 +6,25 @@ import { getGroups } from "@/lib/data/get-groups";
 import ProfileClient from "./ProfileClient";
 
 export default async function ProfilePage() {
-  const [profile, stats, notifPrefs, groups] = await Promise.all([
-    getProfile(),
-    getEncyclopediaStats(),
-    getNotificationPrefs(),
-    getGroups(),
-  ]);
+  const profile = await getProfile();
 
   if (!profile) {
     redirect("/login");
+  }
+
+  // Fetch these independently so one failure doesn't crash the page
+  let stats = null;
+  let notifPrefs = null;
+  let groups: Awaited<ReturnType<typeof getGroups>> = [];
+
+  try {
+    [stats, notifPrefs, groups] = await Promise.all([
+      getEncyclopediaStats(),
+      getNotificationPrefs(),
+      getGroups(),
+    ]);
+  } catch (e) {
+    console.error("Failed to load profile data:", e);
   }
 
   return (
