@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
-import { BookOpen, Flame, FileText, MessageCircle, BarChart3 } from "lucide-react";
+import { BookOpen, Flame, FileText, MessageCircle, BarChart3, ChevronDown, Sparkles } from "lucide-react";
 import Card from "@/components/ui/Card";
 import type { KnowledgeWebData } from "@/lib/data/get-knowledge-web";
 import type { UserProfile, EncyclopediaStats, CategoryBreakdown } from "@wisdom-journal/shared";
@@ -205,6 +205,13 @@ function StatCard({
   );
 }
 
+interface CategoryInsight {
+  summary: string;
+  themes: string[];
+  patterns: string[];
+  response_count?: number;
+}
+
 function CategoryRow({
   category,
   maxResponses,
@@ -212,39 +219,129 @@ function CategoryRow({
   category: CategoryBreakdown;
   maxResponses: number;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const [insight, setInsight] = useState<CategoryInsight | null>(null);
+  const [loading, setLoading] = useState(false);
+
   const style = getCategoryStyle(category.slug);
   const Icon = style.icon;
   const pct = maxResponses > 0 ? (category.response_count / maxResponses) * 100 : 0;
 
+  async function loadInsight() {
+    if (insight || loading || category.response_count === 0) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/insights/category", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category_id: category.category_id,
+          category_name: category.name,
+        }),
+      });
+      if (res.ok) {
+        setInsight(await res.json());
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleToggle() {
+    const next = !expanded;
+    setExpanded(next);
+    if (next && !insight) {
+      loadInsight();
+    }
+  }
+
   return (
     <Card padding="md">
-      <div className="flex items-center gap-3">
-        <div
-          className={`w-10 h-10 rounded-xl ${style.bgColor} flex items-center justify-center flex-shrink-0`}
-        >
-          <Icon className={`w-5 h-5 ${style.color}`} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-1">
-            <p className="text-sm font-semibold text-charcoal truncate">
-              {category.name}
-            </p>
-            <span className="text-xs text-charcoal/50 font-body ml-2 flex-shrink-0">
-              {category.response_count} response{category.response_count !== 1 ? "s" : ""} ·{" "}
-              {category.word_count.toLocaleString()} words
-            </span>
+      <button onClick={handleToggle} className="w-full text-left">
+        <div className="flex items-center gap-3">
+          <div
+            className={`w-10 h-10 rounded-xl ${style.bgColor} flex items-center justify-center flex-shrink-0`}
+          >
+            <Icon className={`w-5 h-5 ${style.color}`} />
           </div>
-          <div className="w-full h-2 bg-soft-gray rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${style.bgColor}`}
-              style={{
-                width: `${Math.max(pct, 2)}%`,
-                opacity: 0.8,
-              }}
-            />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-sm font-semibold text-charcoal truncate">
+                {category.name}
+              </p>
+              <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                <span className="text-xs text-charcoal/50 font-body">
+                  {category.response_count} response{category.response_count !== 1 ? "s" : ""} ·{" "}
+                  {category.word_count.toLocaleString()} words
+                </span>
+                <ChevronDown
+                  className={`w-4 h-4 text-charcoal/40 transition-transform ${expanded ? "rotate-180" : ""}`}
+                />
+              </div>
+            </div>
+            <div className="w-full h-2 bg-soft-gray rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${style.bgColor}`}
+                style={{
+                  width: `${Math.max(pct, 2)}%`,
+                  opacity: 0.8,
+                }}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      </button>
+
+      {expanded && (
+        <div className="mt-4 pt-4 border-t border-soft-gray">
+          {loading && (
+            <div className="flex items-center gap-2 text-sm text-charcoal/50 font-body">
+              <Sparkles className="w-4 h-4 text-golden-hour animate-pulse" />
+              Generating insights...
+            </div>
+          )}
+          {insight && (
+            <div className="space-y-3 text-sm">
+              {insight.summary && (
+                <p className="text-charcoal/70 font-body leading-relaxed">
+                  {insight.summary}
+                </p>
+              )}
+              {insight.themes && insight.themes.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-charcoal/50 mb-1.5">Recurring Themes</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {insight.themes.map((theme) => (
+                      <span key={theme} className="px-2 py-0.5 rounded-full bg-golden-hour/10 text-golden-hour text-xs">
+                        {theme}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {insight.patterns && insight.patterns.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-charcoal/50 mb-1.5">Patterns</p>
+                  <ul className="space-y-1">
+                    {insight.patterns.map((pattern) => (
+                      <li key={pattern} className="text-charcoal/60 font-body text-xs">
+                        {pattern}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {category.response_count === 0 && (
+                <p className="text-charcoal/50 font-body">
+                  Answer questions in this category to unlock insights.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </Card>
   );
 }
