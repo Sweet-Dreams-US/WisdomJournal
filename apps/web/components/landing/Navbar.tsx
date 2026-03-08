@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { BookOpen } from "lucide-react";
 import gsap from "gsap";
 import Button from "@/components/ui/Button";
+import { createClient } from "@/lib/supabase/client";
 
 export default function Navbar() {
   const navRef = useRef<HTMLElement>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     if (!navRef.current) return;
@@ -16,6 +18,13 @@ export default function Navbar() {
       { y: -80, opacity: 0 },
       { y: 0, opacity: 1, duration: 1, ease: "power3.out", delay: 0.3 }
     );
+  }, []);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsLoggedIn(!!user);
+    });
   }, []);
 
   return (
@@ -45,14 +54,22 @@ export default function Navbar() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Link href="/login">
-              <Button variant="ghost" size="sm">
-                Sign In
-              </Button>
-            </Link>
-            <Link href="/register">
-              <Button size="sm">Get Started</Button>
-            </Link>
+            {isLoggedIn ? (
+              <Link href="/dashboard">
+                <Button size="sm">Go to Dashboard</Button>
+              </Link>
+            ) : (
+              <>
+                <Link href="/login">
+                  <Button variant="ghost" size="sm">
+                    Sign In
+                  </Button>
+                </Link>
+                <Link href="/register">
+                  <Button size="sm">Get Started</Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>
