@@ -85,11 +85,9 @@ export async function POST() {
       .insert({
         text: fq.text,
         category_id: fq.category_id,
-        difficulty_level: "medium",
+        difficulty: "medium",
         emotional_weight: "neutral",
         expected_length: "medium",
-        context_type: "personal",
-        is_seed: false,
         is_daily_reflection: false,
       })
       .select("id")
@@ -105,7 +103,7 @@ export async function POST() {
         question_id: question.id,
         sort_order: 6 + i,
       })
-      .select("*, question:questions(id, text, category_id, categories:category_id(id, name, slug))")
+      .select("*, question:questions(*, category:categories(*))")
       .single();
 
     if (item) newItems.push(item);
