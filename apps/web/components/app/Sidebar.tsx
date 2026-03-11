@@ -37,14 +37,7 @@ export default function Sidebar() {
     router.refresh();
   }
 
-  const displayName = profile?.full_name ?? "User";
   const streak = profile?.current_streak ?? 0;
-  const initials = displayName
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
 
   const sidebarContent = (
     <>
@@ -57,25 +50,15 @@ export default function Sidebar() {
         </Link>
       </div>
 
-      {/* User section */}
-      <div className="px-4 py-4 border-b border-soft-gray">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-deep-sky/10 flex items-center justify-center flex-shrink-0">
-            <span className="text-sm font-bold text-deep-sky">{initials}</span>
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-twilight truncate">
-              {displayName}
-            </p>
-            {streak > 0 && (
-              <span className="inline-flex items-center gap-1 text-xs text-golden-hour font-medium">
-                <Flame className="w-3 h-3" />
-                {streak} day streak
-              </span>
-            )}
-          </div>
+      {/* Streak indicator */}
+      {streak > 0 && (
+        <div className="px-4 py-3 border-b border-soft-gray">
+          <span className="inline-flex items-center gap-1.5 text-xs text-golden-hour font-medium">
+            <Flame className="w-3.5 h-3.5" />
+            {streak} day streak
+          </span>
         </div>
-      </div>
+      )}
 
       <nav className="flex-1 p-4">
         <ul className="space-y-1">
