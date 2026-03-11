@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 import type {
   Group,
   GroupMember,
@@ -27,8 +28,14 @@ export async function getGroup(
 
   if (!user) return null;
 
+  // Use service role to avoid self-referencing RLS issues
+  const admin = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
   // Fetch group
-  const { data: group } = await supabase
+  const { data: group } = await admin
     .from("groups")
     .select("*")
     .eq("id", groupId)
@@ -37,7 +44,7 @@ export async function getGroup(
   if (!group) return null;
 
   // Fetch all members with profiles and access summaries
-  const { data: members } = await supabase
+  const { data: members } = await admin
     .from("group_members")
     .select(
       `
@@ -64,7 +71,7 @@ export async function getGroup(
   // Get current user's category access for this group
   let myCategoryAccess: GroupDetail["my_category_access"] = [];
   if (myMembership) {
-    const { data: access } = await supabase
+    const { data: access } = await admin
       .from("group_category_access")
       .select(
         `

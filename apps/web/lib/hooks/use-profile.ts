@@ -28,7 +28,7 @@ export function useProfile() {
 
       if (data) {
         // If full_name is missing, fill from auth metadata and persist to DB
-        if (!data.full_name) {
+        if (!data.full_name || data.full_name.trim() === "") {
           const fallbackName =
             user.user_metadata?.full_name ??
             user.user_metadata?.name ??

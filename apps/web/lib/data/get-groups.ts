@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 import type { Group, GroupMember, GroupAccessSummary } from "@wisdom-journal/shared";
 
 export interface GroupWithMembership extends Group {
@@ -15,8 +16,14 @@ export async function getGroups(): Promise<GroupWithMembership[]> {
 
   if (!user) return [];
 
+  // Use service role to avoid self-referencing RLS issues on group_members
+  const admin = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
   // Get all groups where the user is a member (not departed)
-  const { data: memberships } = await supabase
+  const { data: memberships } = await admin
     .from("group_members")
     .select(
       `
