@@ -24,9 +24,17 @@ export function useProfile() {
         .from("profiles")
         .select("*")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
       if (data) {
+        // If full_name is missing, fill from auth metadata
+        if (!data.full_name) {
+          data.full_name =
+            user.user_metadata?.full_name ??
+            user.user_metadata?.name ??
+            user.email?.split("@")[0] ??
+            null;
+        }
         setProfile(data as UserProfile);
       }
       setLoading(false);

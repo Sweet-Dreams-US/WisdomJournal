@@ -19,7 +19,29 @@ export async function getProfile(): Promise<UserProfile | null> {
       .eq("id", user.id)
       .maybeSingle();
 
-    if (data) return data as UserProfile;
+    if (data) {
+      // Fix missing full_name in existing profiles
+      if (!data.full_name) {
+        const nameFromAuth =
+          user.user_metadata?.full_name ??
+          user.user_metadata?.name ??
+          user.email?.split("@")[0] ??
+          null;
+        if (nameFromAuth) {
+          const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+          if (serviceKey && supabaseUrl) {
+            const admin = createServiceClient(supabaseUrl, serviceKey);
+            await admin
+              .from("profiles")
+              .update({ full_name: nameFromAuth })
+              .eq("id", user.id);
+            data.full_name = nameFromAuth;
+          }
+        }
+      }
+      return data as UserProfile;
+    }
 
     // No profile row — create one using service role to bypass RLS
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
