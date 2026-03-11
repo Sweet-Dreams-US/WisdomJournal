@@ -1,6 +1,7 @@
 "use client";
 
-import { Flame, BookOpen, Sun, PartyPopper } from "lucide-react";
+import { useState } from "react";
+import { Flame, BookOpen, Sun, PartyPopper, Sparkles, Loader2 } from "lucide-react";
 import StatsCard from "@/components/ui/StatsCard";
 import ProgressDots from "@/components/ui/ProgressDots";
 import QuestionCard from "@/components/app/QuestionCard";
@@ -26,12 +27,50 @@ export default function DashboardClient({
   const firstName = profile.full_name?.split(" ")[0] ?? "there";
   const greeting = getGreeting();
 
-  const items = (dailySet as any)?.items ?? [];
-  const totalQuestions = items.length;
-  const answeredCount = items.filter(
+  const allItems = (dailySet as any)?.items ?? [];
+  const originalItems = allItems.filter((item: any) => item.sort_order <= 5);
+  const followUpItems = allItems.filter((item: any) => item.sort_order > 5);
+
+  const totalQuestions = originalItems.length;
+  const answeredCount = originalItems.filter(
     (item: any) => item.response_id !== null
   ).length;
-  const allDone = totalQuestions > 0 && answeredCount === totalQuestions;
+  const allOriginalDone = totalQuestions > 0 && answeredCount === totalQuestions;
+
+  const totalFollowUps = followUpItems.length;
+  const answeredFollowUps = followUpItems.filter(
+    (item: any) => item.response_id !== null
+  ).length;
+
+  const [bonusItems, setBonusItems] = useState<any[]>(followUpItems);
+  const [loadingFollowUps, setLoadingFollowUps] = useState(false);
+  const [followUpError, setFollowUpError] = useState<string | null>(null);
+
+  const canGenerateFollowUps = answeredCount >= 3 && bonusItems.length === 0;
+
+  async function generateFollowUps() {
+    if (loadingFollowUps) return;
+    setLoadingFollowUps(true);
+    setFollowUpError(null);
+
+    try {
+      const res = await fetch("/api/daily/follow-up", { method: "POST" });
+      const data = await res.json();
+
+      if (res.ok && data.items) {
+        setBonusItems(data.items);
+      } else {
+        setFollowUpError(data.error || "Could not generate follow-up questions.");
+      }
+    } catch {
+      setFollowUpError("Network error. Please try again.");
+    } finally {
+      setLoadingFollowUps(false);
+    }
+  }
+
+  const totalAll = totalQuestions + bonusItems.length;
+  const answeredAll = answeredCount + answeredFollowUps;
 
   return (
     <div className="max-w-4xl">
@@ -41,11 +80,13 @@ export default function DashboardClient({
           {greeting}, {firstName}!
         </h2>
         <p className="text-charcoal/60">
-          {allDone
-            ? "You've answered all your questions today. Well done!"
-            : totalQuestions > 0
-              ? "Your daily questions are waiting for you."
-              : "Your questions are being prepared..."}
+          {allOriginalDone && bonusItems.length === 0
+            ? "You've answered all your questions today. Want some follow-ups?"
+            : allOriginalDone && bonusItems.length > 0
+              ? `You have ${bonusItems.length - answeredFollowUps} bonus questions remaining.`
+              : totalQuestions > 0
+                ? "Your daily questions are waiting for you."
+                : "Your questions are being prepared..."}
         </p>
       </div>
 
@@ -66,7 +107,7 @@ export default function DashboardClient({
           iconBg="bg-deep-sky/10"
         />
         <StatsCard
-          value={totalQuestions}
+          value={totalAll}
           label="Questions Today"
           icon={Sun}
           iconColor="text-sunrise-coral"
@@ -79,29 +120,14 @@ export default function DashboardClient({
         <>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-twilight">
-              Today&apos;s Questions &mdash; {answeredCount} of{" "}
-              {totalQuestions}
+              Today&apos;s Questions &mdash; {answeredAll} of {totalAll}
             </h3>
-            <ProgressDots total={totalQuestions} completed={answeredCount} />
+            <ProgressDots total={totalAll} completed={answeredAll} />
           </div>
-
-          {/* All-done celebration */}
-          {allDone && (
-            <Card padding="lg" className="mb-6 text-center">
-              <PartyPopper className="w-12 h-12 text-golden-hour mx-auto mb-3" />
-              <h3 className="text-lg font-bold text-twilight mb-1">
-                All done for today!
-              </h3>
-              <p className="text-charcoal/60 text-sm">
-                Come back tomorrow for new questions. Your streak is{" "}
-                {profile.current_streak} days strong.
-              </p>
-            </Card>
-          )}
 
           {/* Question cards */}
           <div className="space-y-3">
-            {items.map((item: any, i: number) => (
+            {originalItems.map((item: any, i: number) => (
               <QuestionCard
                 key={item.id}
                 question={item.question}
@@ -113,6 +139,87 @@ export default function DashboardClient({
               />
             ))}
           </div>
+
+          {/* Follow-up section */}
+          {allOriginalDone && bonusItems.length === 0 && (
+            <div className="mt-6">
+              {canGenerateFollowUps ? (
+                <Card padding="lg" className="text-center border border-golden-hour/20 bg-golden-hour/5">
+                  <Sparkles className="w-10 h-10 text-golden-hour mx-auto mb-3" />
+                  <h3 className="text-lg font-bold text-twilight mb-1">
+                    Ready for more?
+                  </h3>
+                  <p className="text-charcoal/60 text-sm mb-4">
+                    Based on your answers today, we can generate 5 personalized follow-up questions that dig deeper.
+                  </p>
+                  <button
+                    onClick={generateFollowUps}
+                    disabled={loadingFollowUps}
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-golden-hour text-white font-medium hover:bg-golden-hour/90 transition-colors disabled:opacity-50"
+                  >
+                    {loadingFollowUps ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-4 h-4" />
+                    )}
+                    {loadingFollowUps ? "Generating..." : "Generate Follow-up Questions"}
+                  </button>
+                  {followUpError && (
+                    <p className="text-xs text-error mt-3">{followUpError}</p>
+                  )}
+                </Card>
+              ) : !allOriginalDone ? null : (
+                <Card padding="lg" className="text-center">
+                  <PartyPopper className="w-12 h-12 text-golden-hour mx-auto mb-3" />
+                  <h3 className="text-lg font-bold text-twilight mb-1">
+                    All done for today!
+                  </h3>
+                  <p className="text-charcoal/60 text-sm">
+                    Come back tomorrow for new questions. Your streak is{" "}
+                    {profile.current_streak} days strong.
+                  </p>
+                </Card>
+              )}
+            </div>
+          )}
+
+          {/* Bonus questions */}
+          {bonusItems.length > 0 && (
+            <div className="mt-6">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles className="w-4 h-4 text-golden-hour" />
+                <h3 className="text-sm font-bold text-golden-hour uppercase tracking-wider">
+                  Bonus Follow-up Questions
+                </h3>
+              </div>
+              <div className="space-y-3">
+                {bonusItems.map((item: any, i: number) => (
+                  <QuestionCard
+                    key={item.id}
+                    question={item.question}
+                    isAnswered={item.response_id !== null}
+                    responsePreview={undefined}
+                    questionNumber={totalQuestions + i + 1}
+                    categorySlug={item.question?.category?.slug || item.question?.categories?.slug}
+                    categoryName={item.question?.category?.name || item.question?.categories?.name}
+                  />
+                ))}
+              </div>
+
+              {answeredFollowUps === bonusItems.length && (
+                <Card padding="lg" className="mt-4 text-center">
+                  <PartyPopper className="w-12 h-12 text-golden-hour mx-auto mb-3" />
+                  <h3 className="text-lg font-bold text-twilight mb-1">
+                    Incredible! All 10 questions answered!
+                  </h3>
+                  <p className="text-charcoal/60 text-sm">
+                    You went above and beyond today. Your streak is{" "}
+                    {profile.current_streak} days strong.
+                  </p>
+                </Card>
+              )}
+            </div>
+          )}
         </>
       )}
     </div>

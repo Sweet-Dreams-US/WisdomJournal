@@ -12,6 +12,7 @@ export default function RegisterPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [betaCode, setBetaCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -20,27 +21,82 @@ export default function RegisterPage() {
     setError(null);
     setLoading(true);
 
-    const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName },
-        emailRedirectTo: `${window.location.origin}/auth/callback?type=signup`,
-      },
-    });
+    // Validate beta code first
+    try {
+      const codeRes = await fetch("/api/beta/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: betaCode.trim() }),
+      });
+      const codeData = await codeRes.json();
 
-    if (error) {
-      setError(error.message);
+      if (!codeData.valid) {
+        setError(codeData.message || "Invalid invite code");
+        setLoading(false);
+        return;
+      }
+    } catch {
+      setError("Could not validate invite code. Please try again.");
       setLoading(false);
       return;
     }
 
-    // Redirect to verify-email page with email for display
+    const supabase = createClient();
+    const { error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: fullName, beta_code: betaCode.trim().toUpperCase() },
+        emailRedirectTo: `${window.location.origin}/auth/callback?type=signup`,
+      },
+    });
+
+    if (signUpError) {
+      setError(signUpError.message);
+      setLoading(false);
+      return;
+    }
+
+    // Increment the beta code usage
+    try {
+      await fetch("/api/beta/use", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: betaCode.trim().toUpperCase(), email }),
+      });
+    } catch {
+      // Non-blocking
+    }
+
     router.push(`/verify-email?email=${encodeURIComponent(email)}`);
   }
 
   async function handleGoogleSignUp() {
+    if (!betaCode.trim()) {
+      setError("Please enter your beta invite code first");
+      return;
+    }
+
+    // Validate code before OAuth
+    try {
+      const codeRes = await fetch("/api/beta/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: betaCode.trim() }),
+      });
+      const codeData = await codeRes.json();
+      if (!codeData.valid) {
+        setError(codeData.message || "Invalid invite code");
+        return;
+      }
+    } catch {
+      setError("Could not validate invite code");
+      return;
+    }
+
+    // Store code in localStorage for the callback to pick up
+    localStorage.setItem("beta_code", betaCode.trim().toUpperCase());
+
     const supabase = createClient();
     await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -60,6 +116,14 @@ export default function RegisterPage() {
       </p>
 
       <form onSubmit={handleRegister} className="space-y-4">
+        <Input
+          label="Beta Invite Code"
+          type="text"
+          placeholder="Enter your invite code"
+          value={betaCode}
+          onChange={(e) => setBetaCode(e.target.value)}
+          required
+        />
         <Input
           label="Full Name"
           type="text"

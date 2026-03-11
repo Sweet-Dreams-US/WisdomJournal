@@ -6,16 +6,15 @@ import {
   BookOpen,
   Flame,
   FileText,
-  Shield,
   Download,
   Trash2,
   Users,
-  Plus,
   Clock,
 } from "lucide-react";
 import Card from "@/components/ui/Card";
 import StatsCard from "@/components/ui/StatsCard";
 import Button from "@/components/ui/Button";
+import LegacySection from "@/components/app/LegacySection";
 import type {
   UserProfile,
   EncyclopediaStats,
@@ -245,20 +244,9 @@ export default function ProfileClient({
       </Card>
 
       {/* Legacy Contacts */}
-      <h3 className="text-lg font-bold text-twilight mb-3">Legacy Contacts</h3>
-      <Card padding="md" className="mb-6">
-        <p className="text-sm text-charcoal/60 mb-4">
-          Designate trusted people who can access your wisdom after you&apos;re gone.
-        </p>
-        <div className="text-center py-6 text-charcoal/40">
-          <Shield className="w-8 h-8 mx-auto mb-2" />
-          <p className="text-sm">No legacy contacts added yet.</p>
-        </div>
-        <Button variant="outline" size="sm" className="mt-2 border-charcoal/20 text-charcoal/60 hover:text-charcoal hover:border-charcoal/40">
-          <Plus className="w-4 h-4 mr-1" />
-          Add Legacy Contact
-        </Button>
-      </Card>
+      <div className="mb-6">
+        <LegacySection />
+      </div>
 
       {/* Groups summary */}
       <h3 className="text-lg font-bold text-twilight mb-3">Groups</h3>

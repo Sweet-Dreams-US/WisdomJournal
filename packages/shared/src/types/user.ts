@@ -27,6 +27,10 @@ export interface User {
   onboarding_completed: boolean;
   onboarding_completed_at: string | null;
 
+  // Admin & Beta
+  is_admin: boolean;
+  beta_code_used: string | null;
+
   created_at: string;
   updated_at: string;
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Sun, BookOpen, MessageCircle, User, LogOut, Users, X, Flame, Globe } from "lucide-react";
+import { Sun, BookOpen, MessageCircle, User, LogOut, Users, X, Flame, Globe, Shield } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useSidebar } from "./SidebarProvider";
@@ -16,6 +16,7 @@ const navItems = [
   { label: "Ask", href: "/ask", icon: MessageCircle },
   { label: "Groups", href: "/groups", icon: Users },
   { label: "Profile", href: "/profile", icon: User },
+  { label: "Admin", href: "/admin", icon: Shield, adminOnly: true },
 ];
 
 export default function Sidebar() {
@@ -79,6 +80,8 @@ export default function Sidebar() {
       <nav className="flex-1 p-4">
         <ul className="space-y-1">
           {navItems.map((item) => {
+            // Skip admin for non-admin users
+            if (item.adminOnly && !profile?.is_admin) return null;
             const isActive =
               item.href === "/dashboard"
                 ? pathname === "/dashboard"
