@@ -34,19 +34,31 @@ export async function generateDailyQuestions(
 
     const totalCategories = categories?.length ?? 10;
 
-    // Get candidate pool: active category questions
-    const { data: candidates, error: candidateError } = await supabase
-      .from("questions")
-      .select(
-        `
-        id, text, category_id, subcategory_id, difficulty, emotional_weight,
-        avg_rating, skip_rate, is_daily_reflection,
-        category:categories(slug)
-        `
-      )
-      .eq("is_active", true)
-      .eq("is_daily_reflection", false)
-      .limit(500);
+    // Get candidate pool: sample from each category to ensure diversity
+    // Fetch a random spread across all categories instead of first 500 rows
+    const allCandidates: any[] = [];
+    const categoryIds = categories?.map((c: any) => c.id) ?? [];
+
+    for (const catId of categoryIds) {
+      const { data: catQuestions } = await supabase
+        .from("questions")
+        .select(
+          `
+          id, text, category_id, subcategory_id, difficulty, emotional_weight,
+          avg_rating, skip_rate, is_daily_reflection,
+          category:categories(slug)
+          `
+        )
+        .eq("is_active", true)
+        .eq("is_daily_reflection", false)
+        .eq("category_id", catId)
+        .limit(50);
+
+      if (catQuestions) allCandidates.push(...catQuestions);
+    }
+
+    const candidates = allCandidates;
+    const candidateError = null;
 
     if (candidateError) {
       console.error("Question query error:", candidateError);
