@@ -27,6 +27,7 @@ export default function GroupsClient({ profile, groups }: GroupsClientProps) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [newGroup, setNewGroup] = useState({
     name: "",
     description: "",
@@ -38,6 +39,7 @@ export default function GroupsClient({ profile, groups }: GroupsClientProps) {
     e.preventDefault();
     if (creating || !newGroup.name.trim()) return;
     setCreating(true);
+    setCreateError(null);
 
     try {
       const res = await fetch("/api/groups", {
@@ -53,11 +55,15 @@ export default function GroupsClient({ profile, groups }: GroupsClientProps) {
 
       if (res.ok) {
         setShowCreate(false);
+        setCreateError(null);
         setNewGroup({ name: "", description: "", type: "private", defaultAccess: true });
         router.refresh();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setCreateError(data.error || "Failed to create group");
       }
     } catch (error) {
-      console.error("Create group error:", error);
+      setCreateError("Network error. Please try again.");
     } finally {
       setCreating(false);
     }
@@ -143,6 +149,9 @@ export default function GroupsClient({ profile, groups }: GroupsClientProps) {
               </div>
             </label>
 
+            {createError && (
+              <p className="text-sm text-error bg-error/10 px-3 py-2 rounded-lg">{createError}</p>
+            )}
             <div className="flex gap-2 justify-end pt-2">
               <Button variant="ghost" size="sm" type="button" onClick={() => setShowCreate(false)}
                 className="text-charcoal/60 hover:text-charcoal hover:bg-soft-gray"

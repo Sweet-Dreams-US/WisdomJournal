@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 
 export async function POST(request: NextRequest) {
   const supabase = createClient();
@@ -22,8 +23,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Use service role to bypass RLS for group creation + first member insert
+  const admin = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
   // Create group
-  const { data: group, error: groupError } = await supabase
+  const { data: group, error: groupError } = await admin
     .from("groups")
     .insert({
       name: name.trim(),
@@ -41,7 +48,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Auto-add creator as owner with active status
-  const { error: memberError } = await supabase
+  const { error: memberError } = await admin
     .from("group_members")
     .insert({
       group_id: group.id,
