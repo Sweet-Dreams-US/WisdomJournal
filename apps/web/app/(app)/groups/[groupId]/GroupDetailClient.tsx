@@ -1,16 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Users, Globe, Lock, UserPlus, LogOut, Trash2, Crown, Shield } from "lucide-react";
+import { ArrowLeft, Users, Globe, Lock, UserPlus, LogOut, Trash2, Crown, Shield, Flame, Activity } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import TrustColorBadge from "@/components/ui/TrustColorBadge";
 import CategoryAccessGrid from "@/components/ui/CategoryAccessGrid";
+import ActivityFeed from "@/components/app/ActivityFeed";
+import type { ActivityEvent } from "@/components/app/ActivityFeed";
 import type { GroupRole } from "@wisdom-journal/shared";
 import type { GroupDetail } from "@/lib/data/get-group";
+
+interface GroupStats {
+  totalMembers: number;
+  activeMembers: number;
+  topStreaks: {
+    id: string;
+    full_name: string | null;
+    avatar_url: string | null;
+    current_streak: number;
+    longest_streak: number;
+  }[];
+  categoryCoverage: {
+    name: string;
+    slug: string;
+    totalResponses: number;
+    memberCount: number;
+  }[];
+}
 
 interface GroupDetailClientProps {
   group: GroupDetail;
@@ -47,6 +67,44 @@ export default function GroupDetailClient({ group }: GroupDetailClientProps) {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<GroupRole>("member");
   const [inviting, setInviting] = useState(false);
+
+  const [activityEvents, setActivityEvents] = useState<ActivityEvent[]>([]);
+  const [loadingActivity, setLoadingActivity] = useState(true);
+  const [groupStats, setGroupStats] = useState<GroupStats | null>(null);
+  const [loadingStats, setLoadingStats] = useState(true);
+
+  useEffect(() => {
+    async function fetchActivity() {
+      try {
+        const res = await fetch(`/api/groups/${group.id}/activity`);
+        if (res.ok) {
+          const data = await res.json();
+          setActivityEvents(data.events);
+        }
+      } catch (err) {
+        console.error("Failed to load activity:", err);
+      } finally {
+        setLoadingActivity(false);
+      }
+    }
+
+    async function fetchStats() {
+      try {
+        const res = await fetch(`/api/groups/${group.id}/stats`);
+        if (res.ok) {
+          const data = await res.json();
+          setGroupStats(data);
+        }
+      } catch (err) {
+        console.error("Failed to load stats:", err);
+      } finally {
+        setLoadingStats(false);
+      }
+    }
+
+    fetchActivity();
+    fetchStats();
+  }, [group.id]);
 
   async function handleCategoryToggle(slug: string, enabled: boolean) {
     setCategoryAccess((prev) =>
@@ -185,6 +243,81 @@ export default function GroupDetailClient({ group }: GroupDetailClientProps) {
             );
           })}
         </div>
+      </Card>
+
+      {/* Member Stats */}
+      <h3 className="text-lg font-bold text-twilight mb-3 flex items-center gap-2">
+        <Flame className="w-5 h-5 text-golden-hour" />
+        Member Stats
+      </h3>
+      <Card padding="md" className="mb-6">
+        {loadingStats ? (
+          <div className="text-sm text-charcoal/40 py-4 text-center">Loading stats...</div>
+        ) : groupStats ? (
+          <div className="space-y-4">
+            <div className="flex gap-4">
+              <div className="flex-1 text-center p-3 rounded-xl bg-cloud-white">
+                <p className="text-2xl font-bold text-twilight">{groupStats.totalMembers}</p>
+                <p className="text-xs text-charcoal/40">Total Members</p>
+              </div>
+              <div className="flex-1 text-center p-3 rounded-xl bg-cloud-white">
+                <p className="text-2xl font-bold text-deep-sky">{groupStats.activeMembers}</p>
+                <p className="text-xs text-charcoal/40">Active This Week</p>
+              </div>
+            </div>
+
+            {groupStats.topStreaks.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-charcoal/60 mb-2">Streak Leaderboard</p>
+                <div className="space-y-2">
+                  {groupStats.topStreaks.map((member, idx) => {
+                    const name = member.full_name ?? "Unknown";
+                    const initials = name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase()
+                      .slice(0, 2);
+
+                    return (
+                      <div key={member.id} className="flex items-center gap-3 p-2 rounded-xl">
+                        <span className="text-sm font-bold text-charcoal/40 w-5 text-right">
+                          {idx + 1}
+                        </span>
+                        <div className="w-8 h-8 rounded-full bg-deep-sky/10 flex items-center justify-center flex-shrink-0">
+                          <span className="text-xs font-bold text-deep-sky">{initials}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-charcoal truncate">{name}</p>
+                        </div>
+                        <div className="flex items-center gap-1 text-sm">
+                          <Flame className="w-4 h-4 text-golden-hour" />
+                          <span className="font-bold text-twilight">{member.current_streak}</span>
+                          <span className="text-charcoal/40 text-xs">day{member.current_streak !== 1 ? "s" : ""}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-sm text-charcoal/40 py-4 text-center">Unable to load stats.</div>
+        )}
+      </Card>
+
+      {/* Activity Feed */}
+      <h3 className="text-lg font-bold text-twilight mb-3 flex items-center gap-2">
+        <Activity className="w-5 h-5 text-deep-sky" />
+        Recent Activity
+      </h3>
+      <Card padding="md" className="mb-6">
+        {loadingActivity ? (
+          <div className="text-sm text-charcoal/40 py-4 text-center">Loading activity...</div>
+        ) : (
+          <ActivityFeed events={activityEvents} />
+        )}
       </Card>
 
       {/* Category access */}
