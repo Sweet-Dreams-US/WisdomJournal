@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Sparkles, Info, Star, ChevronDown, Clock, MessageCircle } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Search, Sparkles, Info, Star, ChevronDown, Clock, MessageCircle, Users } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import EmptyState from "@/components/ui/EmptyState";
@@ -17,14 +18,26 @@ interface AiResult {
   sources: { id: string; text: string; category_slug: string }[];
 }
 
+interface FriendOption {
+  friendshipId: string;
+  userId: string;
+  name: string;
+  sharedCategories: number;
+}
+
 interface AskClientProps {
   profile: UserProfile;
   pastQueries: WisdomQuery[];
+  friendOptions?: FriendOption[];
 }
 
-export default function AskClient({ profile, pastQueries }: AskClientProps) {
+export default function AskClient({ profile, pastQueries, friendOptions = [] }: AskClientProps) {
+  const searchParams = useSearchParams();
+  const initialFriend = searchParams.get("friend") ?? "";
+
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<QueryMode>("personality");
+  const [targetFriend, setTargetFriend] = useState(initialFriend);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AiResult | null>(null);
   const [rating, setRating] = useState(0);
@@ -32,7 +45,10 @@ export default function AskClient({ profile, pastQueries }: AskClientProps) {
   const [showHistory, setShowHistory] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const firstName = profile.full_name?.split(" ")[0] ?? "your";
+  const selectedFriend = friendOptions.find((f) => f.friendshipId === targetFriend);
+  const firstName = selectedFriend
+    ? selectedFriend.name.split(" ")[0]
+    : profile.full_name?.split(" ")[0] ?? "your";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -49,6 +65,7 @@ export default function AskClient({ profile, pastQueries }: AskClientProps) {
         body: JSON.stringify({
           query_text: query.trim(),
           mode,
+          ...(selectedFriend ? { target_user_id: selectedFriend.userId } : {}),
         }),
       });
 
@@ -92,6 +109,44 @@ export default function AskClient({ profile, pastQueries }: AskClientProps) {
           Query the wisdom you&apos;ve shared and get AI-powered answers.
         </p>
       </div>
+
+      {/* Friend target selector */}
+      {friendOptions.length > 0 && (
+        <div className="mb-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Users className="w-4 h-4 text-charcoal/50" />
+            <span className="text-sm text-charcoal/60">Whose wisdom?</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setTargetFriend("")}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                !targetFriend
+                  ? "bg-deep-sky text-white"
+                  : "bg-soft-gray text-charcoal/60 hover:text-charcoal"
+              }`}
+            >
+              My Wisdom
+            </button>
+            {friendOptions.map((f) => (
+              <button
+                key={f.friendshipId}
+                type="button"
+                onClick={() => setTargetFriend(f.friendshipId)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                  targetFriend === f.friendshipId
+                    ? "bg-deep-sky text-white"
+                    : "bg-soft-gray text-charcoal/60 hover:text-charcoal"
+                }`}
+                title={`${f.sharedCategories} categories shared with you`}
+              >
+                {f.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Query input */}
       <form onSubmit={handleSubmit} className="mb-6">

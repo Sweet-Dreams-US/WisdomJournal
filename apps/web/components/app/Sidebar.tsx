@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Sun, BookOpen, MessageCircle, User, LogOut, Users, X, Flame, Globe, Shield } from "lucide-react";
+import { Sun, BookOpen, MessageCircle, User, LogOut, Users, UserPlus, X, Flame, Globe, Shield } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useSidebar } from "./SidebarProvider";
@@ -15,6 +15,7 @@ const navItems = [
   { label: "Encyclopedia", href: "/encyclopedia", icon: Globe },
   { label: "Ask", href: "/ask", icon: MessageCircle },
   { label: "Groups", href: "/groups", icon: Users },
+  { label: "Friends", href: "/friends", icon: UserPlus },
   { label: "Profile", href: "/profile", icon: User },
   { label: "Admin", href: "/admin", icon: Shield, adminOnly: true },
 ];

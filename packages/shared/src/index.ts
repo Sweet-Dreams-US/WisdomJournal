@@ -36,6 +36,16 @@ export type {
   TrustColor,
 } from "./types/group";
 
+// Types — Friend
+export type {
+  Friendship,
+  FriendCategoryAccess,
+  FriendAccessSummary,
+  FriendProfile,
+  FriendWithProfile,
+  FriendshipStatus,
+} from "./types/friend";
+
 // Types — Category
 export type { Category, Subcategory } from "./types/category";
 
