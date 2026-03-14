@@ -10,6 +10,7 @@ import {
   Trash2,
   Users,
   Clock,
+  Settings,
 } from "lucide-react";
 import Card from "@/components/ui/Card";
 import StatsCard from "@/components/ui/StatsCard";
@@ -97,9 +98,18 @@ export default function ProfileClient({
 
   return (
     <div className="max-w-3xl">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-twilight mb-2">Your Profile</h2>
-        <p className="text-charcoal/60">Manage your account settings and preferences.</p>
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-twilight mb-2">Your Profile</h2>
+          <p className="text-charcoal/60">Manage your account settings and preferences.</p>
+        </div>
+        <Link
+          href="/settings"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-button text-sm font-medium text-charcoal/60 hover:text-charcoal border border-charcoal/20 hover:border-charcoal/40 transition-all"
+        >
+          <Settings className="w-4 h-4" />
+          Settings
+        </Link>
       </div>
 
       {/* User info card */}
