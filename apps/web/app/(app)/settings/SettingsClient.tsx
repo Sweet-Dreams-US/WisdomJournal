@@ -16,6 +16,10 @@ import {
   CheckCircle,
   Loader2,
   X,
+  Shield,
+  Plus,
+  UserCheck,
+  XCircle,
 } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -56,6 +60,17 @@ export default function SettingsClient({ profile }: SettingsClientProps) {
   } | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Access grants
+  const [grants, setGrants] = useState<{ given: any[]; received: any[] }>({
+    given: [],
+    received: [],
+  });
+  const [grantsLoaded, setGrantsLoaded] = useState(false);
+  const [grantEmail, setGrantEmail] = useState("");
+  const [grantLevel, setGrantLevel] = useState<"query" | "read">("query");
+  const [grantMessage, setGrantMessage] = useState("");
+  const [grantSaving, setGrantSaving] = useState(false);
 
   // Account deletion
   const [deleteConfirm, setDeleteConfirm] = useState("");
@@ -261,6 +276,82 @@ export default function SettingsClient({ profile }: SettingsClientProps) {
     setImportFileName(null);
     setImportError(null);
     setImportResult(null);
+  }
+
+  // Access grants
+  async function loadGrants() {
+    if (grantsLoaded) return;
+    try {
+      const res = await fetch("/api/access-grants");
+      if (res.ok) {
+        const data = await res.json();
+        setGrants(data);
+      }
+    } catch {
+      // ignore
+    }
+    setGrantsLoaded(true);
+  }
+
+  async function createGrant() {
+    if (!grantEmail.trim()) return;
+    setGrantSaving(true);
+    try {
+      const res = await fetch("/api/access-grants", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          grantee_email: grantEmail.trim(),
+          access_level: grantLevel,
+          personal_message: grantMessage.trim() || null,
+        }),
+      });
+      if (res.ok) {
+        setGrantEmail("");
+        setGrantMessage("");
+        setGrantsLoaded(false);
+        loadGrants();
+      }
+    } catch {
+      // ignore
+    } finally {
+      setGrantSaving(false);
+    }
+  }
+
+  async function revokeGrant(id: string) {
+    try {
+      await fetch(`/api/access-grants/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "revoke" }),
+      });
+      setGrants((prev) => ({
+        ...prev,
+        given: prev.given.filter((g) => g.id !== id),
+        received: prev.received.filter((g) => g.id !== id),
+      }));
+    } catch {
+      // ignore
+    }
+  }
+
+  async function acceptGrant(id: string) {
+    try {
+      await fetch(`/api/access-grants/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "accept" }),
+      });
+      setGrants((prev) => ({
+        ...prev,
+        received: prev.received.map((g) =>
+          g.id === id ? { ...g, status: "active" } : g
+        ),
+      }));
+    } catch {
+      // ignore
+    }
   }
 
   // Account deletion
@@ -520,6 +611,160 @@ export default function SettingsClient({ profile }: SettingsClientProps) {
           onChange={handleFileSelect}
           className="hidden"
         />
+      </Card>
+
+      {/* Access Grants */}
+      <h3 className="text-lg font-bold text-twilight mb-3">Access Grants</h3>
+      <Card padding="md" className="mb-8">
+        <p className="text-sm text-charcoal/60 mb-4">
+          Grant others permission to query your wisdom or read your journal entries.
+          They will receive an email invitation.
+        </p>
+
+        {/* Grant form */}
+        <div className="space-y-3 mb-4 p-4 bg-soft-gray/30 rounded-xl">
+          <Input
+            variant="light"
+            label="Recipient email"
+            value={grantEmail}
+            onChange={(e) => setGrantEmail(e.target.value)}
+            placeholder="friend@example.com"
+          />
+          <div className="flex items-center gap-4">
+            <label className="text-sm text-charcoal/70">Access level:</label>
+            <select
+              value={grantLevel}
+              onChange={(e) => setGrantLevel(e.target.value as "query" | "read")}
+              className="text-sm border border-soft-gray rounded-lg px-3 py-1.5 bg-white"
+            >
+              <option value="query">Query (ask questions)</option>
+              <option value="read">Read (see responses)</option>
+            </select>
+          </div>
+          <Input
+            variant="light"
+            label="Personal message (optional)"
+            value={grantMessage}
+            onChange={(e) => setGrantMessage(e.target.value)}
+            placeholder="I'd like to share my wisdom with you..."
+          />
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={createGrant}
+            disabled={!grantEmail.trim() || grantSaving}
+          >
+            {grantSaving ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Plus className="w-4 h-4 mr-2" />
+            )}
+            Send Invitation
+          </Button>
+        </div>
+
+        {/* Load and display existing grants */}
+        {!grantsLoaded ? (
+          <button
+            onClick={loadGrants}
+            className="text-sm text-deep-sky hover:text-deep-sky/80 transition-colors"
+          >
+            <Shield className="w-4 h-4 inline mr-1" />
+            Load existing grants
+          </button>
+        ) : (
+          <div className="space-y-4">
+            {grants.given.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-charcoal/50 uppercase tracking-wide mb-2">
+                  Grants You&apos;ve Given
+                </p>
+                <div className="space-y-2">
+                  {grants.given.map((g: any) => (
+                    <div
+                      key={g.id}
+                      className="flex items-center justify-between p-3 bg-soft-gray/30 rounded-lg"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-charcoal">
+                          {g.grantee?.full_name || g.grantee_email || "Unknown"}
+                        </p>
+                        <p className="text-xs text-charcoal/50">
+                          {g.access_level} access ·{" "}
+                          <span
+                            className={
+                              g.status === "active"
+                                ? "text-green-600"
+                                : "text-golden-hour"
+                            }
+                          >
+                            {g.status}
+                          </span>
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => revokeGrant(g.id)}
+                        className="p-1 rounded hover:bg-red-50 transition-colors"
+                        title="Revoke access"
+                      >
+                        <XCircle className="w-4 h-4 text-charcoal/30 hover:text-error" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {grants.received.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-charcoal/50 uppercase tracking-wide mb-2">
+                  Access Granted to You
+                </p>
+                <div className="space-y-2">
+                  {grants.received.map((g: any) => (
+                    <div
+                      key={g.id}
+                      className="flex items-center justify-between p-3 bg-soft-gray/30 rounded-lg"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-charcoal">
+                          {g.grantor?.full_name || "Unknown"}
+                        </p>
+                        <p className="text-xs text-charcoal/50">
+                          {g.access_level} access ·{" "}
+                          <span
+                            className={
+                              g.status === "active"
+                                ? "text-green-600"
+                                : "text-golden-hour"
+                            }
+                          >
+                            {g.status}
+                          </span>
+                        </p>
+                      </div>
+                      {g.status === "pending" && (
+                        <button
+                          onClick={() => acceptGrant(g.id)}
+                          className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-lg bg-deep-sky/10 text-deep-sky hover:bg-deep-sky/20 transition-colors"
+                        >
+                          <UserCheck className="w-3.5 h-3.5" />
+                          Accept
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {grants.given.length === 0 && grants.received.length === 0 && (
+              <p className="text-sm text-charcoal/40 text-center py-2">
+                No access grants yet
+              </p>
+            )}
+          </div>
+        )}
       </Card>
 
       {/* Danger Zone */}

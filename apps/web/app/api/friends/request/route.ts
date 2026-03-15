@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { sendEmail } from "@/lib/email/send";
+import { friendRequestEmail } from "@/lib/email/templates";
 
 export async function POST(request: NextRequest) {
   const supabase = createClient();
@@ -149,6 +151,22 @@ async function sendFriendRequestNotification(
       body: message || null,
       data: { friendship_id: friendshipId, from_user_id: fromUserId },
     });
+
+    // Send email notification
+    const { data: recipientProfile } = await admin
+      .from("profiles")
+      .select("full_name")
+      .eq("id", toUserId)
+      .single();
+    const { data: authUser } = await admin.auth.admin.getUserById(toUserId);
+    if (authUser?.user?.email) {
+      const template = friendRequestEmail(
+        recipientProfile?.full_name?.split(" ")[0] ?? "there",
+        senderName,
+        message
+      );
+      await sendEmail({ to: authUser.user.email, ...template });
+    }
   } catch {
     // Non-critical, don't fail the request
     console.error("Failed to send friend request notification");

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { embedResponse } from "@/lib/ai/embeddings";
+import { chatCompletion } from "@/lib/ai/openrouter";
 
 export async function POST(request: NextRequest) {
   const supabase = createClient();
@@ -114,5 +115,50 @@ export async function POST(request: NextRequest) {
   // Generate embedding asynchronously (don't block response)
   embedResponse(response.id, response_text.trim()).catch(console.error);
 
+  // Extract people mentions asynchronously (fire-and-forget)
+  extractMentions(response.id, user.id, response_text.trim()).catch(
+    console.error
+  );
+
   return NextResponse.json({ response }, { status: 201 });
+}
+
+async function extractMentions(responseId: string, userId: string, text: string) {
+  const supabase = createClient();
+  try {
+    const result = await chatCompletion(
+      [
+        {
+          role: "system",
+          content: `Extract people mentions from this journal entry. Return a JSON array of objects with:
+- "name": the person's name as written
+- "normalized": lowercase normalized version
+- "relationship": one of: mother, father, parent, sibling, spouse, partner, child, grandparent, aunt, uncle, cousin, friend, coworker, boss, teacher, mentor, therapist, doctor, neighbor, acquaintance, other, or null
+Only real people, not hypothetical. Return [] if none. Return ONLY valid JSON.`,
+        },
+        { role: "user", content: text },
+      ],
+      { maxTokens: 500, temperature: 0.1 }
+    );
+
+    const parsed = JSON.parse(result.content);
+    if (!Array.isArray(parsed) || parsed.length === 0) return;
+
+    const rows = parsed.map(
+      (m: { name: string; normalized: string; relationship: string | null }) => ({
+        user_id: userId,
+        response_id: responseId,
+        mentioned_name: m.name,
+        normalized_name: m.normalized.toLowerCase(),
+        relationship: m.relationship,
+      })
+    );
+
+    await supabase.from("people_mentions").upsert(rows, {
+      onConflict: "response_id,normalized_name",
+      ignoreDuplicates: true,
+    });
+  } catch (err) {
+    console.error("Mention extraction failed:", err);
+  }
 }

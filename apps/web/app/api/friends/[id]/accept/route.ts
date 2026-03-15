@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { sendEmail } from "@/lib/email/send";
+import { friendAcceptedEmail } from "@/lib/email/templates";
 
 export async function POST(
   _request: NextRequest,
@@ -78,6 +80,21 @@ export async function POST(
       body: "You can now share wisdom categories with each other.",
       data: { friendship_id: params.id, from_user_id: user.id },
     });
+
+    // Send email notification
+    const { data: requesterProfile } = await admin
+      .from("profiles")
+      .select("full_name")
+      .eq("id", friendship.requested_by)
+      .single();
+    const { data: authUser } = await admin.auth.admin.getUserById(friendship.requested_by);
+    if (authUser?.user?.email) {
+      const template = friendAcceptedEmail(
+        requesterProfile?.full_name?.split(" ")[0] ?? "there",
+        accepterName
+      );
+      await sendEmail({ to: authUser.user.email, ...template });
+    }
   } catch {
     console.error("Failed to send friend accepted notification");
   }
