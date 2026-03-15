@@ -355,15 +355,14 @@ export default function FriendsClient({ friends }: { friends: FriendsResult }) {
                   ) : u.friendship?.status === "pending" ? (
                     <span className="text-xs text-charcoal/40">Pending</span>
                   ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
+                    <button
                       onClick={() => handleSendRequest(u.id)}
                       disabled={actionLoading === u.id}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-deep-sky text-deep-sky hover:bg-deep-sky hover:text-white transition-colors disabled:opacity-50"
                     >
-                      <UserPlus className="w-4 h-4 mr-1" />
+                      <UserPlus className="w-4 h-4" />
                       Add
-                    </Button>
+                    </button>
                   )}
                 </div>
               </Card>

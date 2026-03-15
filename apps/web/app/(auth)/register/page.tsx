@@ -42,7 +42,7 @@ export default function RegisterPage() {
     }
 
     const supabase = createClient();
-    const { error: signUpError } = await supabase.auth.signUp({
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -53,6 +53,14 @@ export default function RegisterPage() {
 
     if (signUpError) {
       setError(signUpError.message);
+      setLoading(false);
+      return;
+    }
+
+    // Supabase returns a user with no identities when email already exists
+    // (security feature to prevent email enumeration)
+    if (signUpData?.user && signUpData.user.identities?.length === 0) {
+      setError("An account with this email already exists. Please sign in instead.");
       setLoading(false);
       return;
     }
