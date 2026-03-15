@@ -83,42 +83,67 @@ CREATE POLICY "Users can search discoverable profiles"
   );
 
 -- ===================
+-- SECURITY DEFINER functions to break RLS circular reference
+-- (responses policy -> response_categories -> responses = infinite recursion)
+-- ===================
+
+-- Checks if current user has friend access to a specific response via category sharing
+CREATE OR REPLACE FUNCTION check_friend_response_access(p_response_user_id UUID, p_response_id UUID)
+RETURNS BOOLEAN
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE sql STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM friendships f
+    JOIN friend_category_access fca ON fca.friendship_id = f.id
+    JOIN response_categories rc ON rc.response_id = p_response_id AND rc.category_id = fca.category_id
+    WHERE f.status = 'accepted'
+      AND auth.uid() IN (f.user_a, f.user_b)
+      AND p_response_user_id IN (f.user_a, f.user_b)
+      AND p_response_user_id != auth.uid()
+      AND fca.user_id = p_response_user_id
+      AND fca.is_enabled = true
+  );
+$$;
+
+-- Checks if current user has friend access to a response_category row
+CREATE OR REPLACE FUNCTION check_friend_category_access(p_response_id UUID, p_category_id UUID)
+RETURNS BOOLEAN
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE sql STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM responses r
+    JOIN friendships f ON r.user_id IN (f.user_a, f.user_b)
+    JOIN friend_category_access fca ON fca.friendship_id = f.id
+      AND fca.category_id = p_category_id
+    WHERE r.id = p_response_id
+      AND r.deleted_at IS NULL
+      AND f.status = 'accepted'
+      AND auth.uid() IN (f.user_a, f.user_b)
+      AND r.user_id != auth.uid()
+      AND fca.user_id = r.user_id
+      AND fca.is_enabled = true
+  );
+$$;
+
+-- ===================
 -- EXTEND RESPONSES: friends can view shared category responses
 -- ===================
 CREATE POLICY "Friends can view shared category responses"
   ON responses FOR SELECT
   USING (
     deleted_at IS NULL
-    AND EXISTS (
-      SELECT 1
-      FROM friendships f
-      JOIN friend_category_access fca ON fca.friendship_id = f.id
-      JOIN response_categories rc ON rc.response_id = responses.id AND rc.category_id = fca.category_id
-      WHERE f.status = 'accepted'
-        AND auth.uid() IN (f.user_a, f.user_b)
-        AND responses.user_id IN (f.user_a, f.user_b)
-        AND responses.user_id != auth.uid()
-        AND fca.user_id = responses.user_id  -- the OWNER controls sharing
-        AND fca.is_enabled = true
-    )
+    AND check_friend_response_access(user_id, id)
   );
 
 -- Friends can also view response_categories for shared responses
 CREATE POLICY "Friends can view categories of shared responses"
   ON response_categories FOR SELECT
   USING (
-    EXISTS (
-      SELECT 1
-      FROM responses r
-      JOIN friendships f ON r.user_id IN (f.user_a, f.user_b)
-      JOIN friend_category_access fca ON fca.friendship_id = f.id
-        AND fca.category_id = response_categories.category_id
-      WHERE r.id = response_categories.response_id
-        AND r.deleted_at IS NULL
-        AND f.status = 'accepted'
-        AND auth.uid() IN (f.user_a, f.user_b)
-        AND r.user_id != auth.uid()
-        AND fca.user_id = r.user_id
-        AND fca.is_enabled = true
-    )
+    check_friend_category_access(response_id, category_id)
   );
