@@ -11,21 +11,19 @@ import {
   EyeOff,
   BookOpen,
   Flame,
+  ChevronRight,
 } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import TrustColorBadge from "@/components/ui/TrustColorBadge";
 import CategoryAccessGrid from "@/components/ui/CategoryAccessGrid";
-import CategoryBadge from "@/components/ui/CategoryBadge";
 import type { FriendDetail } from "@/lib/data/get-friend";
-import type { FriendResponse } from "@/lib/data/get-friend-wisdom";
 
 interface Props {
   friend: FriendDetail;
-  initialWisdom: FriendResponse[];
 }
 
-export default function FriendDetailClient({ friend, initialWisdom }: Props) {
+export default function FriendDetailClient({ friend }: Props) {
   const router = useRouter();
   const { friend_profile, categories } = friend;
 
@@ -54,10 +52,6 @@ export default function FriendDetailClient({ friend, initialWisdom }: Props) {
       enabled: access?.is_enabled ?? false,
     };
   });
-
-  const [wisdom, setWisdom] = useState(initialWisdom);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [loadingWisdom, setLoadingWisdom] = useState(false);
 
   const initials = friend_profile.full_name
     ? friend_profile.full_name
@@ -96,24 +90,6 @@ export default function FriendDetailClient({ friend, initialWisdom }: Props) {
     await fetch(`/api/friends/${friend.friendship.id}`, { method: "DELETE" });
     router.push("/friends");
     router.refresh();
-  }
-
-  async function filterByCategory(categoryId: string | null) {
-    setSelectedCategory(categoryId);
-    setLoadingWisdom(true);
-
-    try {
-      const url = categoryId
-        ? `/api/friends/${friend.friendship.id}/wisdom?category_id=${categoryId}`
-        : `/api/friends/${friend.friendship.id}/wisdom`;
-      const res = await fetch(url);
-      const data = await res.json();
-      setWisdom(data.responses ?? []);
-    } catch {
-      setWisdom([]);
-    } finally {
-      setLoadingWisdom(false);
-    }
   }
 
   const sharedCategories = theirCategoryAccess.filter((c) => c.enabled);
@@ -211,100 +187,26 @@ export default function FriendDetailClient({ friend, initialWisdom }: Props) {
         />
       </Card>
 
-      {/* Shared Wisdom */}
+      {/* Ask Their Wisdom */}
       {sharedCategories.length > 0 && (
-        <>
-          <h3 className="text-lg font-bold text-twilight mb-2 flex items-center gap-2">
-            <MessageCircle className="w-5 h-5" />
-            Their Shared Wisdom
-          </h3>
-
-          {/* Category filter chips */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            <button
-              onClick={() => filterByCategory(null)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                selectedCategory === null
-                  ? "bg-deep-sky text-white"
-                  : "bg-soft-gray text-charcoal/60 hover:text-charcoal"
-              }`}
-            >
-              All
-            </button>
-            {sharedCategories.map((c) => {
-              const cat = categories.find((cat) => cat.slug === c.slug);
-              return (
-                <button
-                  key={c.slug}
-                  onClick={() => cat && filterByCategory(cat.id)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                    selectedCategory === cat?.id
-                      ? "bg-deep-sky text-white"
-                      : "bg-soft-gray text-charcoal/60 hover:text-charcoal"
-                  }`}
-                >
-                  {c.name}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Wisdom list */}
-          {loadingWisdom ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="h-24 bg-soft-gray/50 rounded-2xl animate-pulse"
-                />
-              ))}
+        <Link href={`/ask?friend=${friend.friendship.id}`}>
+          <Card padding="lg" className="mb-6 hover:shadow-md transition-shadow cursor-pointer border-2 border-deep-sky/20 hover:border-deep-sky/40">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-deep-sky/10 flex items-center justify-center flex-shrink-0">
+                <MessageCircle className="w-6 h-6 text-deep-sky" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-bold text-twilight">
+                  Ask {friend_profile.full_name?.split(" ")[0] ?? "Their"}&apos;s Wisdom
+                </h3>
+                <p className="text-sm text-charcoal/60 mt-0.5">
+                  Ask questions and get answers based on {sharedCategories.length} shared {sharedCategories.length === 1 ? "category" : "categories"} of their journal entries
+                </p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-charcoal/30" />
             </div>
-          ) : wisdom.length === 0 ? (
-            <Card padding="md">
-              <p className="text-sm text-charcoal/50 text-center py-4">
-                No shared responses in this category yet
-              </p>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {wisdom.map((r) => (
-                <Card key={r.id} padding="md">
-                  {r.question && (
-                    <p className="text-xs font-medium text-deep-sky mb-1.5">
-                      {r.question.question_text}
-                    </p>
-                  )}
-                  <p className="text-sm text-charcoal line-clamp-3">
-                    {r.response_text}
-                  </p>
-                  <div className="flex items-center gap-2 mt-2">
-                    {r.categories.map((cat) => (
-                      <CategoryBadge
-                        key={cat.id}
-                        slug={cat.slug}
-                        name={cat.name}
-                      />
-                    ))}
-                    <span className="text-xs text-charcoal/40 ml-auto">
-                      {new Date(r.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
-
-          {/* Ask Their Wisdom */}
-          <div className="mt-4">
-            <Link href={`/ask?friend=${friend.friendship.id}`}>
-              <Button variant="outline" size="md" className="w-full">
-                <MessageCircle className="w-4 h-4 mr-2" />
-                Ask {friend_profile.full_name?.split(" ")[0] ?? "Their"}&apos;s
-                Wisdom
-              </Button>
-            </Link>
-          </div>
-        </>
+          </Card>
+        </Link>
       )}
 
       {sharedCategories.length === 0 && (

@@ -76,23 +76,51 @@ export async function processWisdomQuery(
 
     // Fallback: if no vector results, fetch recent responses directly
     if (sources.length === 0) {
-      const { data: recentResponses } = await supabase
-        .from("responses")
-        .select(`
-          id, response_text,
-          categories:response_categories(category:categories(slug))
-        `)
-        .eq("user_id", input.targetUserId)
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false })
-        .limit(8);
+      const admin = createServiceClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
 
-      if (recentResponses && recentResponses.length > 0) {
-        sources = recentResponses.map((r: any) => ({
-          id: r.id,
-          text: r.response_text,
-          category_slug: r.categories?.[0]?.category?.slug ?? "unknown",
-        }));
+      const isSelf = input.querierId === input.targetUserId;
+
+      if (isSelf) {
+        // Self query: fetch all own responses
+        const { data: recentResponses } = await admin
+          .from("responses")
+          .select(`
+            id, response_text,
+            categories:response_categories(category:categories(slug))
+          `)
+          .eq("user_id", input.targetUserId)
+          .is("deleted_at", null)
+          .order("created_at", { ascending: false })
+          .limit(8);
+
+        if (recentResponses && recentResponses.length > 0) {
+          sources = recentResponses.map((r: any) => ({
+            id: r.id,
+            text: r.response_text,
+            category_slug: r.categories?.[0]?.category?.slug ?? "unknown",
+          }));
+        }
+      } else {
+        // Friend/group query: only fetch responses in shared categories
+        const { data: sharedResponses } = await admin.rpc(
+          "get_friend_shared_responses_fallback",
+          {
+            p_querier_id: input.querierId,
+            p_target_user_id: input.targetUserId,
+            p_limit: 8,
+          }
+        );
+
+        if (sharedResponses && sharedResponses.length > 0) {
+          sources = sharedResponses.map((r: any) => ({
+            id: r.response_id,
+            text: r.response_text,
+            category_slug: r.category_slug ?? "unknown",
+          }));
+        }
       }
     }
 
@@ -122,8 +150,12 @@ STRICT OUTPUT RULES:
         : `You are summarizing wisdom from ${targetName}'s journal entries. Provide responses based solely on the entries provided below. Use third person. If the entries don't contain relevant information, say so plainly.${outputRules}`;
 
     if (sources.length === 0) {
+      const isSelf = input.querierId === input.targetUserId;
+      const noWisdomMessage = isSelf
+        ? "You don't have any journal entries yet. Answer some daily questions first, then come back and ask about your wisdom."
+        : `${targetName} hasn't shared any wisdom about that topic yet. They may not have answered questions in the categories they've shared with you, or they haven't shared enough categories for this question.`;
       return {
-        ai_response: "You don't have any journal entries yet. Answer some daily questions first, then come back and ask about your wisdom.",
+        ai_response: noWisdomMessage,
         source_count: 0,
         source_response_ids: [],
         sources: [],

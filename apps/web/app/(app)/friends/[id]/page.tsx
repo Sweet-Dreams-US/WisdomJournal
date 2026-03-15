@@ -1,5 +1,4 @@
 import { getFriend } from "@/lib/data/get-friend";
-import { getFriendWisdom } from "@/lib/data/get-friend-wisdom";
 import { redirect } from "next/navigation";
 import FriendDetailClient from "./FriendDetailClient";
 
@@ -14,12 +13,5 @@ export default async function FriendDetailPage({
     redirect("/friends");
   }
 
-  const sharedWisdom = await getFriendWisdom(params.id);
-
-  return (
-    <FriendDetailClient
-      friend={friend}
-      initialWisdom={sharedWisdom}
-    />
-  );
+  return <FriendDetailClient friend={friend} />;
 }
