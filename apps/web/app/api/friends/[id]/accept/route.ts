@@ -52,13 +52,34 @@ export async function POST(
   // Accept the friendship (trigger will init category access)
   const { data: updated, error } = await admin
     .from("friendships")
-    .update({ status: "accepted" })
+    .update({ status: "accepted", responded_at: new Date().toISOString() })
     .eq("id", params.id)
     .select()
     .single();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Send notification to the requester that their request was accepted
+  try {
+    const { data: accepterProfile } = await admin
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .single();
+
+    const accepterName = accepterProfile?.full_name ?? "Someone";
+
+    await admin.from("notifications").insert({
+      user_id: friendship.requested_by,
+      type: "friend_accepted",
+      title: `${accepterName} accepted your friend request`,
+      body: "You can now share wisdom categories with each other.",
+      data: { friendship_id: params.id, from_user_id: user.id },
+    });
+  } catch {
+    console.error("Failed to send friend accepted notification");
   }
 
   return NextResponse.json({ friendship: updated });

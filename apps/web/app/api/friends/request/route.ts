@@ -95,6 +95,10 @@ export async function POST(request: NextRequest) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    // Send notification to target user
+    await sendFriendRequestNotification(admin, user.id, targetUserId, updated.id, message);
+
     return NextResponse.json({ friendship: updated });
   }
 
@@ -115,5 +119,38 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Send notification to target user
+  await sendFriendRequestNotification(admin, user.id, targetUserId, friendship.id, message);
+
   return NextResponse.json({ friendship }, { status: 201 });
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function sendFriendRequestNotification(
+  admin: any,
+  fromUserId: string,
+  toUserId: string,
+  friendshipId: string,
+  message?: string
+) {
+  try {
+    const { data: senderProfile } = await admin
+      .from("profiles")
+      .select("full_name")
+      .eq("id", fromUserId)
+      .single();
+
+    const senderName = senderProfile?.full_name ?? "Someone";
+
+    await admin.from("notifications").insert({
+      user_id: toUserId,
+      type: "friend_request",
+      title: `${senderName} sent you a friend request`,
+      body: message || null,
+      data: { friendship_id: friendshipId, from_user_id: fromUserId },
+    });
+  } catch {
+    // Non-critical, don't fail the request
+    console.error("Failed to send friend request notification");
+  }
 }

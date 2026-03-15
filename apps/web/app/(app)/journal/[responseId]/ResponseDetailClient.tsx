@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Heart, Clock, FileText, Tag, ChevronDown, Sparkles, Share2, Link2, Check, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Heart, Clock, FileText, Tag, ChevronDown, Sparkles, Share2, Link2, Check, Loader2, Pencil, X, Trash2 } from "lucide-react";
 import Card from "@/components/ui/Card";
 import CategoryBadge from "@/components/ui/CategoryBadge";
 import Button from "@/components/ui/Button";
@@ -29,8 +30,19 @@ function formatTime(dateStr: string): string {
 }
 
 export default function ResponseDetailClient({ response }: ResponseDetailClientProps) {
+  const router = useRouter();
   const [isFavorite, setIsFavorite] = useState(response.is_favorite);
   const [insightsOpen, setInsightsOpen] = useState(false);
+
+  // Edit state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(response.response_text ?? "");
+  const [editSaving, setEditSaving] = useState(false);
+  const [currentText, setCurrentText] = useState(response.response_text ?? "");
+  const [currentWordCount, setCurrentWordCount] = useState(response.word_count);
+
+  // Delete state
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   // AI insights state (on-demand)
   const [aiSummary, setAiSummary] = useState(response.ai_summary);
@@ -62,6 +74,43 @@ export default function ResponseDetailClient({ response }: ResponseDetailClientP
       });
     } catch {
       setIsFavorite(!newState);
+    }
+  }
+
+  async function handleSaveEdit() {
+    if (!editText.trim() || editSaving) return;
+    setEditSaving(true);
+
+    try {
+      const res = await fetch(`/api/responses/${response.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ response_text: editText }),
+      });
+
+      if (res.ok) {
+        setCurrentText(editText.trim());
+        setCurrentWordCount(editText.trim().split(/\s+/).filter(Boolean).length);
+        setIsEditing(false);
+      }
+    } catch {
+      // Silent fail
+    } finally {
+      setEditSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    try {
+      const res = await fetch(`/api/responses/${response.id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        router.push("/journal");
+        router.refresh();
+      }
+    } catch {
+      // Silent fail
     }
   }
 
@@ -148,12 +197,24 @@ export default function ResponseDetailClient({ response }: ResponseDetailClientP
             )}
           </div>
           <div className="flex items-center gap-1">
+            {!isEditing && (
+              <button
+                onClick={() => {
+                  setEditText(currentText);
+                  setIsEditing(true);
+                }}
+                className="p-2 rounded-lg hover:bg-soft-gray transition-colors"
+                title="Edit"
+              >
+                <Pencil className="w-4 h-4 text-charcoal/30 hover:text-deep-sky transition-colors" />
+              </button>
+            )}
             <button
               onClick={() => setShareOpen(!shareOpen)}
               className="p-2 rounded-lg hover:bg-soft-gray transition-colors"
               title="Share"
             >
-              <Share2 className="w-4.5 h-4.5 text-charcoal/30 hover:text-deep-sky transition-colors" />
+              <Share2 className="w-4 h-4 text-charcoal/30 hover:text-deep-sky transition-colors" />
             </button>
             <button
               onClick={toggleFavorite}
@@ -214,12 +275,52 @@ export default function ResponseDetailClient({ response }: ResponseDetailClientP
           </div>
         )}
 
-        {/* Response text */}
-        <div className="prose prose-charcoal max-w-none">
-          <p className="text-charcoal leading-relaxed whitespace-pre-wrap text-base">
-            {response.response_text}
-          </p>
-        </div>
+        {/* Response text - edit or view mode */}
+        {isEditing ? (
+          <div className="space-y-3">
+            <textarea
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              className="w-full min-h-[200px] p-4 rounded-xl border border-deep-sky/30 bg-white text-charcoal text-base leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-deep-sky/20 focus:border-deep-sky"
+              autoFocus
+            />
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-charcoal/40">
+                {editText.trim().split(/\s+/).filter(Boolean).length} words
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setIsEditing(false);
+                    setEditText(currentText);
+                  }}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg text-charcoal/60 hover:bg-soft-gray transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={editSaving || !editText.trim()}
+                  className="inline-flex items-center gap-1 px-4 py-1.5 text-xs font-semibold rounded-lg bg-deep-sky text-white hover:bg-sky-blue transition-colors disabled:opacity-50"
+                >
+                  {editSaving ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Check className="w-3.5 h-3.5" />
+                  )}
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="prose prose-charcoal max-w-none">
+            <p className="text-charcoal leading-relaxed whitespace-pre-wrap text-base">
+              {currentText}
+            </p>
+          </div>
+        )}
 
         {/* Metadata */}
         <div className="flex flex-wrap items-center gap-4 mt-6 pt-4 border-t border-soft-gray text-xs text-charcoal/50">
@@ -229,7 +330,7 @@ export default function ResponseDetailClient({ response }: ResponseDetailClientP
           </span>
           <span className="flex items-center gap-1">
             <FileText className="w-3.5 h-3.5" />
-            {response.word_count} words
+            {currentWordCount} words
           </span>
           <span className="capitalize">{response.input_method} input</span>
         </div>
@@ -253,6 +354,35 @@ export default function ResponseDetailClient({ response }: ResponseDetailClientP
             </div>
           </div>
         )}
+
+        {/* Delete */}
+        <div className="mt-4 pt-4 border-t border-soft-gray">
+          {deleteConfirm ? (
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-error">Are you sure? This cannot be undone.</span>
+              <button
+                onClick={handleDelete}
+                className="text-xs font-semibold text-error hover:text-error/80"
+              >
+                Yes, delete
+              </button>
+              <button
+                onClick={() => setDeleteConfirm(false)}
+                className="text-xs text-charcoal/50 hover:text-charcoal"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setDeleteConfirm(true)}
+              className="inline-flex items-center gap-1 text-xs text-charcoal/30 hover:text-error transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Delete response
+            </button>
+          )}
+        </div>
       </Card>
 
       {/* AI Insights */}
