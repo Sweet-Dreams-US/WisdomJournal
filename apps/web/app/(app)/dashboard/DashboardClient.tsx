@@ -86,7 +86,7 @@ export default function DashboardClient({
               ? `You have ${bonusItems.length - answeredFollowUps} bonus questions remaining.`
               : totalQuestions > 0
                 ? "Your daily questions are waiting for you."
-                : "Your questions are being prepared..."}
+                : "Your questions are being prepared. Refresh in a moment."}
         </p>
       </div>
 

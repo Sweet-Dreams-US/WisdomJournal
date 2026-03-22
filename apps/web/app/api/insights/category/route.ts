@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { chatCompletion, AI_MODELS } from "@/lib/ai/openrouter";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   const supabase = createClient();
@@ -11,6 +12,15 @@ export async function POST(request: NextRequest) {
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Rate limit: 10 insight requests per 10 minutes
+  const limit = rateLimit(user.id, "category-insight", 10, 10 * 60 * 1000);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Too many insight requests. Please wait a few minutes." },
+      { status: 429 }
+    );
   }
 
   const { category_id, category_name } = await request.json();
