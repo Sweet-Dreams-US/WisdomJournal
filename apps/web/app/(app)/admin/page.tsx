@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import AdminClient from "./AdminClient";
 
@@ -8,7 +9,13 @@ export default async function AdminPage() {
 
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
+  // Use service role to bypass RLS for admin check
+  const admin = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  const { data: profile } = await admin
     .from("profiles")
     .select("is_admin")
     .eq("id", user.id)

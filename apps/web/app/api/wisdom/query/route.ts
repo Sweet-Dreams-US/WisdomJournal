@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { query_text, target_user_id, group_id, mode } =
+  const { query_text, target_user_id, group_id, mode, response_length } =
     await request.json();
 
   if (!query_text?.trim()) {
@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
     queryText: query_text.trim(),
     groupId: group_id || null,
     mode: mode || "personality",
+    responseLength: response_length || "concise",
   });
 
   if (result.error) {

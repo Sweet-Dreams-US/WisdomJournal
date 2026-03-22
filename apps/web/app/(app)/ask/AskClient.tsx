@@ -9,6 +9,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import type { UserProfile, WisdomQuery } from "@wisdom-journal/shared";
 
 type QueryMode = "personality" | "neutral";
+type ResponseLength = "concise" | "full";
 
 interface AiResult {
   id?: string;
@@ -37,6 +38,7 @@ export default function AskClient({ profile, pastQueries, friendOptions = [] }: 
 
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<QueryMode>("personality");
+  const [responseLength, setResponseLength] = useState<ResponseLength>("concise");
   const [targetFriend, setTargetFriend] = useState(initialFriend);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AiResult | null>(null);
@@ -65,6 +67,7 @@ export default function AskClient({ profile, pastQueries, friendOptions = [] }: 
         body: JSON.stringify({
           query_text: query.trim(),
           mode,
+          response_length: responseLength,
           ...(selectedFriend ? { target_user_id: selectedFriend.userId } : {}),
         }),
       });
@@ -195,12 +198,38 @@ export default function AskClient({ profile, pastQueries, friendOptions = [] }: 
               Neutral Mode
             </button>
           </div>
+          <div className="inline-flex rounded-xl bg-soft-gray p-1">
+            <button
+              type="button"
+              onClick={() => setResponseLength("concise")}
+              className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
+                responseLength === "concise"
+                  ? "bg-white text-deep-sky shadow-sm"
+                  : "text-charcoal/60 hover:text-charcoal"
+              }`}
+            >
+              Concise
+            </button>
+            <button
+              type="button"
+              onClick={() => setResponseLength("full")}
+              className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
+                responseLength === "full"
+                  ? "bg-white text-deep-sky shadow-sm"
+                  : "text-charcoal/60 hover:text-charcoal"
+              }`}
+            >
+              Full Detail
+            </button>
+          </div>
           <div className="group relative">
             <Info className="w-4 h-4 text-charcoal/30 cursor-help" />
             <div className="absolute bottom-full left-0 mb-2 w-64 p-3 bg-twilight text-white text-xs rounded-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 shadow-lg">
               <strong>Personality Mode</strong> responds in {firstName}&apos;s voice and style.
-              <br /><br />
               <strong>Neutral Mode</strong> gives factual answers drawn from the entries.
+              <br /><br />
+              <strong>Concise</strong> gives a short AI-summarized answer.
+              <strong>Full Detail</strong> gives the complete response with full context.
             </div>
           </div>
           <div className="flex-1" />

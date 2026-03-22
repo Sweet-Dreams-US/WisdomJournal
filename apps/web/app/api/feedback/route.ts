@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
+
+function getServiceClient() {
+  return createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -22,7 +30,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { data, error } = await supabase
+    const admin = getServiceClient();
+    const { data, error } = await admin
       .from("feedback")
       .insert({
         user_id: user.id,
@@ -47,7 +56,7 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -56,14 +65,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const admin = getServiceClient();
+
     // Check if admin
-    const { data: profile } = await supabase
+    const { data: profile } = await admin
       .from("profiles")
       .select("is_admin")
       .eq("id", user.id)
       .single();
 
-    let query = supabase
+    let query = admin
       .from("feedback")
       .select("*, profiles(full_name, email)");
 

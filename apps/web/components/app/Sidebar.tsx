@@ -98,13 +98,16 @@ export default function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-soft-gray space-y-1">
-        <a
-          href="mailto:cole@marcuccilli.com?subject=Wisdom%20Journal%20Beta%20Feedback"
+        <button
+          onClick={() => {
+            // Trigger the feedback widget by dispatching a custom event
+            window.dispatchEvent(new CustomEvent('open-feedback'));
+          }}
           className="flex items-center gap-3 px-4 py-3 rounded-button text-sm font-medium text-charcoal/70 hover:bg-soft-gray hover:text-charcoal transition-colors duration-150 w-full"
         >
           <MessageSquare className="w-5 h-5" />
           Send Feedback
-        </a>
+        </button>
         <button
           onClick={handleSignOut}
           className="flex items-center gap-3 px-4 py-3 rounded-button text-sm font-medium text-charcoal/70 hover:bg-soft-gray hover:text-charcoal transition-colors duration-150 w-full"

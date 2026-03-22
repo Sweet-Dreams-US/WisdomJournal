@@ -8,6 +8,7 @@ interface WisdomQueryInput {
   queryText: string;
   groupId: string | null;
   mode: "personality" | "neutral";
+  responseLength?: "concise" | "full";
 }
 
 export interface WisdomQueryResult {
@@ -135,11 +136,16 @@ export async function processWisdomQuery(
       targetProfile?.full_name?.split(" ")[0] ?? "this person";
 
     // Build the prompt
+    const isConcise = input.responseLength !== "full";
+    const lengthRule = isConcise
+      ? "- Keep your answer to 2 to 3 sentences max. Summarize the key insight. Be brief and punchy."
+      : "- Give a thorough, detailed answer. Include relevant context, examples, and nuance from the entries. It's OK to be longer.";
+
     const outputRules = `
 
 STRICT OUTPUT RULES:
 - NEVER use dashes, hyphens, em dashes, or en dashes in your sentences. No "-", no "—", no "–". Rephrase instead.
-- Keep your answer concise and direct. Do not over explain. Do not pad with filler words.
+${lengthRule}
 - You must ONLY use information found in the journal entries below. Do NOT use any outside knowledge, general advice, or common wisdom. If the entries do not contain an answer, say you don't have enough entries to answer that.
 - Do not list things unless the person listed them. Write naturally.
 - No generic AI phrases like "It's important to note" or "I hope this helps" or "Based on the information provided".`;
@@ -179,7 +185,7 @@ STRICT OUTPUT RULES:
 
     // Call Claude via OpenRouter
     const aiResult = await chatCompletion(messages, {
-      maxTokens: 300,
+      maxTokens: isConcise ? 200 : 600,
       temperature: input.mode === "personality" ? 0.7 : 0.4,
     });
 

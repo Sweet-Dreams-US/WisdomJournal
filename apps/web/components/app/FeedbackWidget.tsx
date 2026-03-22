@@ -28,6 +28,15 @@ export default function FeedbackWidget() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [isOpen])
 
+  // Listen for sidebar "Send Feedback" button
+  useEffect(() => {
+    function handleOpenFeedback() {
+      setIsOpen(true)
+    }
+    window.addEventListener('open-feedback', handleOpenFeedback)
+    return () => window.removeEventListener('open-feedback', handleOpenFeedback)
+  }, [])
+
   // Reset on close
   useEffect(() => {
     if (!isOpen) {
