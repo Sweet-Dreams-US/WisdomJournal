@@ -20,6 +20,9 @@ import {
   Plus,
   UserCheck,
   XCircle,
+  Heart,
+  Crown,
+  Mail,
 } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -71,6 +74,18 @@ export default function SettingsClient({ profile }: SettingsClientProps) {
   const [grantLevel, setGrantLevel] = useState<"query" | "read">("query");
   const [grantMessage, setGrantMessage] = useState("");
   const [grantSaving, setGrantSaving] = useState(false);
+
+  // Legacy contacts
+  const [legacyContacts, setLegacyContacts] = useState<any[]>([]);
+  const [legacyLoaded, setLegacyLoaded] = useState(false);
+  const [legacyEmail, setLegacyEmail] = useState("");
+  const [legacyName, setLegacyName] = useState("");
+  const [legacyRelationship, setLegacyRelationship] = useState("spouse");
+  const [legacyMessage, setLegacyMessage] = useState("");
+  const [legacyPrimary, setLegacyPrimary] = useState(false);
+  const [legacySaving, setLegacySaving] = useState(false);
+  const [legacyError, setLegacyError] = useState<string | null>(null);
+  const [removingLegacy, setRemovingLegacy] = useState<string | null>(null);
 
   // Account deletion
   const [deleteConfirm, setDeleteConfirm] = useState("");
@@ -349,6 +364,82 @@ export default function SettingsClient({ profile }: SettingsClientProps) {
           g.id === id ? { ...g, status: "active" } : g
         ),
       }));
+    } catch {
+      // ignore
+    }
+  }
+
+  // Legacy contacts
+  async function loadLegacyContacts() {
+    if (legacyLoaded) return;
+    try {
+      const res = await fetch("/api/legacy");
+      if (res.ok) {
+        const data = await res.json();
+        setLegacyContacts(data.contacts || []);
+      }
+    } catch {
+      // ignore
+    }
+    setLegacyLoaded(true);
+  }
+
+  async function addLegacyContact() {
+    if (!legacyEmail.trim() || !legacyName.trim()) return;
+    setLegacySaving(true);
+    setLegacyError(null);
+    try {
+      const res = await fetch("/api/legacy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contact_name: legacyName.trim(),
+          contact_email: legacyEmail.trim(),
+          relationship: legacyRelationship,
+          message: legacyMessage.trim() || null,
+          is_primary: legacyPrimary,
+        }),
+      });
+      if (res.ok) {
+        setLegacyEmail("");
+        setLegacyName("");
+        setLegacyMessage("");
+        setLegacyPrimary(false);
+        setLegacyRelationship("spouse");
+        setLegacyLoaded(false);
+        loadLegacyContacts();
+      } else {
+        const data = await res.json();
+        setLegacyError(data.error || "Failed to add contact");
+      }
+    } catch {
+      setLegacyError("Failed to add contact. Please try again.");
+    } finally {
+      setLegacySaving(false);
+    }
+  }
+
+  async function removeLegacyContact(id: string) {
+    setRemovingLegacy(id);
+    try {
+      await fetch(`/api/legacy/${id}`, { method: "DELETE" });
+      setLegacyContacts((prev) => prev.filter((c) => c.id !== id));
+    } catch {
+      // ignore
+    } finally {
+      setRemovingLegacy(null);
+    }
+  }
+
+  async function toggleLegacyPrimaryHeir(id: string, currentPrimary: boolean) {
+    try {
+      await fetch(`/api/legacy/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_primary: !currentPrimary }),
+      });
+      setLegacyLoaded(false);
+      loadLegacyContacts();
     } catch {
       // ignore
     }
@@ -763,6 +854,167 @@ export default function SettingsClient({ profile }: SettingsClientProps) {
                 No access grants yet
               </p>
             )}
+          </div>
+        )}
+      </Card>
+
+      {/* Legacy & Inheritance */}
+      <h3 className="text-lg font-bold text-twilight mb-3">Legacy &amp; Inheritance</h3>
+      <Card padding="md" className="mb-8">
+        <div className="flex items-start gap-3 mb-4">
+          <Heart className="w-5 h-5 text-deep-sky flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-charcoal/60">
+            Choose who will inherit access to your wisdom journal. They&apos;ll be
+            able to read your entries and ask questions of your captured wisdom.
+          </p>
+        </div>
+
+        {/* Add Legacy Contact form */}
+        <div className="space-y-3 mb-4 p-4 bg-soft-gray/30 rounded-xl">
+          <Input
+            variant="light"
+            label="Contact name"
+            value={legacyName}
+            onChange={(e) => setLegacyName(e.target.value)}
+            placeholder="Jane Doe"
+          />
+          <Input
+            variant="light"
+            label="Contact email"
+            value={legacyEmail}
+            onChange={(e) => setLegacyEmail(e.target.value)}
+            placeholder="jane@example.com"
+          />
+          <div className="flex items-center gap-4">
+            <label className="text-sm text-charcoal/70">Relationship:</label>
+            <select
+              value={legacyRelationship}
+              onChange={(e) => setLegacyRelationship(e.target.value)}
+              className="text-sm border border-soft-gray rounded-lg px-3 py-1.5 bg-white"
+            >
+              <option value="spouse">Spouse</option>
+              <option value="child">Child</option>
+              <option value="parent">Parent</option>
+              <option value="sibling">Sibling</option>
+              <option value="friend">Friend</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <Input
+            variant="light"
+            label="Personal message (optional)"
+            value={legacyMessage}
+            onChange={(e) => setLegacyMessage(e.target.value)}
+            placeholder="A message for when they receive access..."
+          />
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={legacyPrimary}
+              onChange={(e) => setLegacyPrimary(e.target.checked)}
+              className="w-4 h-4 rounded border-soft-gray text-deep-sky focus:ring-deep-sky"
+            />
+            <span className="text-sm text-charcoal/70">
+              Designate as primary heir
+            </span>
+            <Crown className="w-3.5 h-3.5 text-golden-hour" />
+          </label>
+
+          {legacyError && (
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 text-red-700 text-sm">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              {legacyError}
+            </div>
+          )}
+
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={addLegacyContact}
+            disabled={!legacyEmail.trim() || !legacyName.trim() || legacySaving}
+          >
+            {legacySaving ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Plus className="w-4 h-4 mr-2" />
+            )}
+            Add Legacy Contact
+          </Button>
+        </div>
+
+        {/* Existing legacy contacts */}
+        {!legacyLoaded ? (
+          <button
+            onClick={loadLegacyContacts}
+            className="text-sm text-deep-sky hover:text-deep-sky/80 transition-colors"
+          >
+            <Heart className="w-4 h-4 inline mr-1" />
+            Load your legacy contacts
+          </button>
+        ) : legacyContacts.length === 0 ? (
+          <p className="text-sm text-charcoal/40 text-center py-2">
+            No legacy contacts yet
+          </p>
+        ) : (
+          <div>
+            <p className="text-xs font-medium text-charcoal/50 uppercase tracking-wide mb-2">
+              Your Legacy Contacts
+            </p>
+            <div className="space-y-2">
+              {legacyContacts.map((c: any) => (
+                <div
+                  key={c.id}
+                  className="flex items-center justify-between p-3 bg-soft-gray/30 rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-deep-sky/10 flex items-center justify-center">
+                      <Mail className="w-4 h-4 text-deep-sky" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-charcoal flex items-center gap-1.5">
+                        {c.contact_name}
+                        {c.is_primary && (
+                          <Crown className="w-3.5 h-3.5 text-golden-hour" />
+                        )}
+                      </p>
+                      <p className="text-xs text-charcoal/50">
+                        {c.contact_email} &middot;{" "}
+                        <span className="capitalize">{c.relationship || "other"}</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => toggleLegacyPrimaryHeir(c.id, c.is_primary)}
+                      className={`p-1.5 rounded transition-colors ${
+                        c.is_primary
+                          ? "bg-golden-hour/10 text-golden-hour"
+                          : "text-charcoal/30 hover:text-golden-hour hover:bg-golden-hour/10"
+                      }`}
+                      title={c.is_primary ? "Remove primary heir" : "Set as primary heir"}
+                    >
+                      <Crown className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Remove ${c.contact_name} as a legacy contact?`)) {
+                          removeLegacyContact(c.id);
+                        }
+                      }}
+                      disabled={removingLegacy === c.id}
+                      className="p-1 rounded hover:bg-red-50 transition-colors"
+                      title="Remove contact"
+                    >
+                      {removingLegacy === c.id ? (
+                        <Loader2 className="w-4 h-4 text-charcoal/30 animate-spin" />
+                      ) : (
+                        <XCircle className="w-4 h-4 text-charcoal/30 hover:text-error" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </Card>

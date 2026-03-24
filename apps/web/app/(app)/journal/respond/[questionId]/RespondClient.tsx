@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, SkipForward, Check, Keyboard, Mic } from "lucide-react";
+import { ArrowLeft, SkipForward, Check, Keyboard, Mic, ChevronDown, BookOpen } from "lucide-react";
 import Link from "next/link";
 import Card from "@/components/ui/Card";
 import CategoryBadge from "@/components/ui/CategoryBadge";
@@ -40,7 +40,35 @@ export default function RespondClient({
   const checkRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const [showPastResponses, setShowPastResponses] = useState(false);
+  const [pastResponses, setPastResponses] = useState<
+    { id: string; response_text: string; created_at: string; question_text: string | null }[]
+  >([]);
+  const [pastLoading, setPastLoading] = useState(false);
+  const [pastFetched, setPastFetched] = useState(false);
+
   const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
+
+  // Fetch similar past responses when toggled open
+  useEffect(() => {
+    if (showPastResponses && !pastFetched && question.category_id) {
+      setPastLoading(true);
+      fetch(
+        `/api/responses/similar?category_id=${question.category_id}&question_id=${question.id}`
+      )
+        .then((res) => res.json())
+        .then((data) => {
+          setPastResponses(data.responses ?? []);
+          setPastFetched(true);
+        })
+        .catch(() => {
+          setPastFetched(true);
+        })
+        .finally(() => {
+          setPastLoading(false);
+        });
+    }
+  }, [showPastResponses, pastFetched, question.category_id, question.id]);
 
   useEffect(() => {
     if (saved && checkRef.current) {
@@ -93,6 +121,8 @@ export default function RespondClient({
 
       if (res.ok) {
         setSaved(true);
+        // Fire-and-forget achievement check
+        fetch("/api/achievements/check", { method: "POST" }).catch(() => {});
       } else {
         const err = await res.json();
         setSaveError(err.error || "Failed to save. Please try again.");
@@ -191,6 +221,60 @@ export default function RespondClient({
           {question.text}
         </p>
       </Card>
+
+      {/* Similar past responses */}
+      {question.category_id && (
+        <div className="mb-4">
+          <button
+            onClick={() => setShowPastResponses(!showPastResponses)}
+            className="flex items-center gap-2 text-xs text-charcoal/50 hover:text-charcoal/70 transition-colors font-body"
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            Show past responses in this category
+            <ChevronDown
+              className={`w-3 h-3 transition-transform ${showPastResponses ? "rotate-180" : ""}`}
+            />
+          </button>
+
+          {showPastResponses && (
+            <div className="mt-2">
+              {pastLoading && (
+                <div className="text-xs text-charcoal/40 font-body animate-pulse py-2">
+                  Loading past responses...
+                </div>
+              )}
+              {pastFetched && pastResponses.length === 0 && !pastLoading && (
+                <p className="text-xs text-charcoal/40 font-body py-2">
+                  No past responses in this category yet.
+                </p>
+              )}
+              {pastResponses.length > 0 && (
+                <div className="space-y-2">
+                  {pastResponses.map((pr) => (
+                    <Card key={pr.id} padding="sm" className="bg-soft-gray/50">
+                      {pr.question_text && (
+                        <p className="text-xs text-charcoal/40 font-body mb-1 italic">
+                          {pr.question_text}
+                        </p>
+                      )}
+                      <p className="text-xs text-charcoal/60 font-body line-clamp-2 leading-relaxed">
+                        {pr.response_text}
+                      </p>
+                      <p className="text-xs text-charcoal/30 font-body mt-1">
+                        {new Date(pr.created_at).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </p>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Voice recorder (primary) */}
       {inputMode === "voice" && (

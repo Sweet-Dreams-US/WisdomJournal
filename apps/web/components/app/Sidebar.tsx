@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Sun, BookOpen, MessageCircle, User, LogOut, Users, UserPlus, X, Flame, Globe, Shield, Heart, Bell, Activity, Users2, MessageSquare } from "lucide-react";
+import { Sun, BookOpen, MessageCircle, User, LogOut, Users, UserPlus, X, Flame, Globe, Shield, Heart, Bell, Activity, Users2, MessageSquare, Trophy } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useSidebar } from "./SidebarProvider";
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useProfile } from "@/lib/hooks/use-profile";
 
 const navItems = [
@@ -19,6 +19,7 @@ const navItems = [
   { label: "People", href: "/people", icon: Users2 },
   { label: "Activity", href: "/activity", icon: Activity },
   { label: "Favorites", href: "/favorites", icon: Heart },
+  { label: "Achievements", href: "/achievements", icon: Trophy },
   { label: "Notifications", href: "/notifications", icon: Bell },
   { label: "Profile", href: "/profile", icon: User },
   { label: "Admin", href: "/admin", icon: Shield, adminOnly: true },
@@ -29,11 +30,38 @@ export default function Sidebar() {
   const router = useRouter();
   const { isOpen, close } = useSidebar();
   const { profile } = useProfile();
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
     close();
   }, [pathname, close]);
+
+  // Fetch unread notification count
+  const fetchUnreadCount = useCallback(async () => {
+    try {
+      const res = await fetch("/api/notifications/inbox");
+      if (res.ok) {
+        const data = await res.json();
+        setUnreadCount(data.unread_count ?? 0);
+      }
+    } catch {
+      // Silently fail - non-critical
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 60_000);
+    return () => clearInterval(interval);
+  }, [fetchUnreadCount]);
+
+  // Reset count when visiting notifications page
+  useEffect(() => {
+    if (pathname === "/notifications") {
+      setUnreadCount(0);
+    }
+  }, [pathname]);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -74,6 +102,7 @@ export default function Sidebar() {
               item.href === "/dashboard"
                 ? pathname === "/dashboard"
                 : pathname.startsWith(item.href);
+            const isNotifications = item.label === "Notifications";
             return (
               <li key={item.href}>
                 <Link
@@ -89,7 +118,12 @@ export default function Sidebar() {
                   `}
                 >
                   <item.icon className="w-5 h-5" />
-                  {item.label}
+                  <span className="flex-1">{item.label}</span>
+                  {isNotifications && unreadCount > 0 && (
+                    <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold leading-none">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  )}
                 </Link>
               </li>
             );

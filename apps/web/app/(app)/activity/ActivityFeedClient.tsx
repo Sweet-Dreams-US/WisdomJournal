@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   BookOpen,
   Flame,
@@ -8,9 +8,19 @@ import {
   Users,
   UserPlus,
   Activity,
+  Loader2,
+  Filter,
 } from "lucide-react";
 import Card from "@/components/ui/Card";
 import type { ActivityEvent } from "@/lib/data/get-activity-feed";
+
+const EVENT_TYPE_FILTERS = [
+  { value: "all", label: "All", icon: Activity },
+  { value: "response_created", label: "Responses", icon: BookOpen },
+  { value: "streak_milestone", label: "Streaks", icon: Flame },
+  { value: "friend_added", label: "Friends", icon: UserPlus },
+  { value: "joined_group", label: "Groups", icon: Users },
+] as const;
 
 function getEventIcon(type: string) {
   switch (type) {
@@ -75,10 +85,17 @@ interface Props {
 }
 
 export default function ActivityFeedClient({ initialEvents }: Props) {
-  const [events] = useState(initialEvents);
+  const [events, setEvents] = useState(initialEvents);
   const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(initialEvents.length >= 30);
+  const [typeFilter, setTypeFilter] = useState<string>("all");
 
-  async function loadMore() {
+  const filteredEvents = useMemo(() => {
+    if (typeFilter === "all") return events;
+    return events.filter((e) => e.event_type === typeFilter);
+  }, [events, typeFilter]);
+
+  const loadMore = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(
@@ -87,13 +104,16 @@ export default function ActivityFeedClient({ initialEvents }: Props) {
       if (res.ok) {
         const data = await res.json();
         if (data.events?.length > 0) {
-          // Would need setState here but keeping simple for now
+          setEvents((prev) => [...prev, ...data.events]);
+          setHasMore(data.events.length >= 20);
+        } else {
+          setHasMore(false);
         }
       }
     } finally {
       setLoading(false);
     }
-  }
+  }, [events.length]);
 
   return (
     <div className="max-w-3xl">
@@ -106,6 +126,29 @@ export default function ActivityFeedClient({ initialEvents }: Props) {
         </p>
       </div>
 
+      {/* Type filter */}
+      <div className="flex items-center gap-1.5 mb-4 overflow-x-auto pb-1">
+        <Filter className="w-4 h-4 text-charcoal/40 flex-shrink-0 mr-1" />
+        {EVENT_TYPE_FILTERS.map((filter) => {
+          const Icon = filter.icon;
+          const isActive = typeFilter === filter.value;
+          return (
+            <button
+              key={filter.value}
+              onClick={() => setTypeFilter(filter.value)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+                isActive
+                  ? "bg-deep-sky text-white"
+                  : "bg-soft-gray text-charcoal/60 hover:bg-charcoal/10"
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {filter.label}
+            </button>
+          );
+        })}
+      </div>
+
       {events.length === 0 ? (
         <Card padding="lg">
           <div className="text-center py-8">
@@ -116,9 +159,21 @@ export default function ActivityFeedClient({ initialEvents }: Props) {
             </p>
           </div>
         </Card>
+      ) : filteredEvents.length === 0 ? (
+        <Card padding="lg">
+          <div className="text-center py-6">
+            <Activity className="w-10 h-10 text-charcoal/20 mx-auto mb-2" />
+            <p className="text-charcoal/60 text-sm font-medium">
+              No {typeFilter.replace(/_/g, " ")} activity
+            </p>
+            <p className="text-xs text-charcoal/40 mt-1">
+              Try selecting a different filter to see more activity
+            </p>
+          </div>
+        </Card>
       ) : (
         <div className="space-y-2">
-          {events.map((event) => (
+          {filteredEvents.map((event) => (
             <Card key={event.id} padding="sm">
               <div className="flex items-center gap-3 py-1">
                 <div className="flex-shrink-0 w-8 h-8 rounded-full bg-soft-gray flex items-center justify-center">
@@ -136,14 +191,23 @@ export default function ActivityFeedClient({ initialEvents }: Props) {
             </Card>
           ))}
 
-          {events.length >= 30 && (
-            <button
-              onClick={loadMore}
-              disabled={loading}
-              className="w-full py-2 text-sm text-deep-sky hover:text-deep-sky/80 transition-colors"
-            >
-              {loading ? "Loading..." : "Load more"}
-            </button>
+          {hasMore && typeFilter === "all" && (
+            <div className="flex justify-center pt-4">
+              <button
+                onClick={loadMore}
+                disabled={loading}
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-medium text-deep-sky bg-deep-sky/10 hover:bg-deep-sky/20 transition-colors disabled:opacity-50"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  "Load More"
+                )}
+              </button>
+            </div>
           )}
         </div>
       )}

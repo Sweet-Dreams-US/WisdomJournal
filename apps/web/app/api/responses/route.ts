@@ -3,6 +3,67 @@ import { createClient } from "@/lib/supabase/server";
 import { embedResponse } from "@/lib/ai/embeddings";
 import { chatCompletion } from "@/lib/ai/openrouter";
 
+export async function GET(request: NextRequest) {
+  const supabase = createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { searchParams } = request.nextUrl;
+  const offset = parseInt(searchParams.get("offset") ?? "0");
+  const limit = parseInt(searchParams.get("limit") ?? "20");
+  const category = searchParams.get("category") || null;
+  const search = searchParams.get("q") || null;
+
+  // Get total count
+  let countQuery = supabase
+    .from("responses")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .is("deleted_at", null);
+
+  if (search) {
+    countQuery = countQuery.ilike("response_text", `%${search}%`);
+  }
+
+  const { count: totalCount } = await countQuery;
+
+  // Get paginated responses
+  let query = supabase
+    .from("responses")
+    .select(
+      `
+      *,
+      categories:response_categories(
+        *,
+        category:categories(*)
+      )
+      `
+    )
+    .eq("user_id", user.id)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (search) {
+    query = query.ilike("response_text", `%${search}%`);
+  }
+
+  const { data } = await query;
+
+  return NextResponse.json({
+    responses: data ?? [],
+    total: totalCount ?? 0,
+    offset,
+    limit,
+  });
+}
+
 export async function POST(request: NextRequest) {
   const supabase = createClient();
 

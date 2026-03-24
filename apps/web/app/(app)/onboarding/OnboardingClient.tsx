@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { getCategoryStyle } from "@/lib/category-utils";
 import { BookOpen, Check, Clock, ChevronRight, Sparkles } from "lucide-react";
+
+const ONBOARDING_STORAGE_KEY = "wisdom_onboarding_state";
 
 interface Category {
   id: string;
@@ -25,6 +27,33 @@ export default function OnboardingClient({ categories }: OnboardingClientProps) 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [reminderTime, setReminderTime] = useState("09:00");
   const [loading, setLoading] = useState(false);
+
+  // Restore state from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(ONBOARDING_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.step) setStep(parsed.step);
+        if (parsed.selectedCategories) setSelectedCategories(parsed.selectedCategories);
+        if (parsed.reminderTime) setReminderTime(parsed.reminderTime);
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }, []);
+
+  // Persist state to localStorage on changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        ONBOARDING_STORAGE_KEY,
+        JSON.stringify({ step, selectedCategories, reminderTime })
+      );
+    } catch {
+      // Ignore storage errors
+    }
+  }, [step, selectedCategories, reminderTime]);
 
   async function saveStep(stepName: string, data?: Record<string, unknown>) {
     await fetch("/api/onboarding/progress", {
@@ -65,6 +94,11 @@ export default function OnboardingClient({ categories }: OnboardingClientProps) 
   async function handleComplete() {
     setLoading(true);
     await fetch("/api/onboarding/complete", { method: "POST" });
+    try {
+      localStorage.removeItem(ONBOARDING_STORAGE_KEY);
+    } catch {
+      // Ignore
+    }
     router.push("/dashboard");
   }
 
