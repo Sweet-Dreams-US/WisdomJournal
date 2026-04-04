@@ -56,7 +56,7 @@ export async function POST() {
     admin
       .from("friendships")
       .select("*", { count: "exact", head: true })
-      .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
+      .or(`user_a.eq.${user.id},user_b.eq.${user.id}`)
       .eq("status", "accepted"),
     admin
       .from("user_category_stats")
