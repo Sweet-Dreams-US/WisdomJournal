@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <radialGradient id="sky" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#7CB9E8"/>
+      <stop offset="60%" stop-color="#4A90D9"/>
+      <stop offset="100%" stop-color="#2C3E6B"/>
+    </radialGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F5A623" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#F5A623" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="44" fill="url(#sky)"/>
+  <circle cx="96" cy="86" r="34" fill="#FAFBFF" opacity="0.95"/>
+  <circle cx="96" cy="86" r="44" fill="url(#glow)"/>
+  <g fill="#FAFBFF" opacity="0.85">
+    <circle cx="46" cy="40" r="1.8"/>
+    <circle cx="62" cy="22" r="1.3"/>
+    <circle cx="150" cy="46" r="1.6"/>
+    <circle cx="128" cy="26" r="1.2"/>
+    <circle cx="34" cy="70" r="1.4"/>
+    <circle cx="164" cy="84" r="1.3"/>
+  </g>
+  <path d="M40 148 Q96 128 152 148 L152 164 Q96 148 40 164 Z" fill="#FAFBFF" opacity="0.35"/>
+</svg>

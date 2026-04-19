@@ -6,6 +6,8 @@ import { ArrowLeft, Heart, Clock, FileText, Tag, ChevronDown, Sparkles, Share2, 
 import Card from "@/components/ui/Card";
 import CategoryBadge from "@/components/ui/CategoryBadge";
 import Button from "@/components/ui/Button";
+import EntityChips from "@/components/app/EntityChips";
+import RelatedResponses from "@/components/app/RelatedResponses";
 import type { JournalResponse } from "@wisdom-journal/shared";
 
 interface ResponseDetailClientProps {
@@ -234,6 +236,9 @@ export default function ResponseDetailClient({ response }: ResponseDetailClientP
           <span className="capitalize">{response.input_method} input</span>
         </div>
 
+        {/* Entity chips — people, places, dates extracted from text */}
+        <EntityChips text={response.response_text} />
+
         {/* Tags */}
         {response.tags && response.tags.length > 0 && (
           <div className="mt-4 pt-4 border-t border-soft-gray">
@@ -332,6 +337,9 @@ export default function ResponseDetailClient({ response }: ResponseDetailClientP
           </div>
         )}
       </Card>
+
+      {/* Echoes — semantically-related past entries */}
+      <RelatedResponses responseId={response.id} />
     </div>
   );
 }

@@ -10,6 +10,7 @@ import Input from "@/components/ui/Input";
 import TrustColorBadge from "@/components/ui/TrustColorBadge";
 import CategoryAccessGrid from "@/components/ui/CategoryAccessGrid";
 import ActivityFeed from "@/components/app/ActivityFeed";
+import SharedPromptCard from "@/components/app/SharedPromptCard";
 import type { ActivityEvent } from "@/components/app/ActivityFeed";
 import type { GroupRole } from "@wisdom-journal/shared";
 import type { GroupDetail } from "@/lib/data/get-group";
@@ -199,6 +200,15 @@ export default function GroupDetailClient({ group }: GroupDetailClientProps) {
           </div>
         </div>
       </Card>
+
+      {/* Shared weekly prompt */}
+      {group.my_membership && (
+        <SharedPromptCard
+          groupId={group.id}
+          isAdmin={isOwner || isAdmin}
+          currentUserId={group.my_membership.user_id}
+        />
+      )}
 
       {/* Members list */}
       <h3 className="text-lg font-bold text-twilight mb-3">Members</h3>

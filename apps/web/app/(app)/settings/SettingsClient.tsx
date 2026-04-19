@@ -20,6 +20,7 @@ import {
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import DigitalExecutor from "@/components/app/DigitalExecutor";
 
 interface SettingsClientProps {
   profile: any;
@@ -341,6 +342,32 @@ export default function SettingsClient({ profile }: SettingsClientProps) {
           </div>
         </label>
       </Card>
+
+      {/* Legacy & executor */}
+      <h3 className="text-lg font-bold text-twilight mb-3">Legacy</h3>
+      <div className="mb-8 space-y-3">
+        <DigitalExecutor />
+        <div className="grid sm:grid-cols-2 gap-3">
+          <Link
+            href="/memorial"
+            className="block p-4 rounded-card bg-white border border-soft-gray hover:border-deep-sky/40 hover:shadow-card transition-all"
+          >
+            <p className="text-sm font-medium text-twilight">Memorial book</p>
+            <p className="text-xs text-charcoal/55 mt-0.5">
+              Printable PDF of your entries, organized by category.
+            </p>
+          </Link>
+          <Link
+            href="/review"
+            className="block p-4 rounded-card bg-white border border-soft-gray hover:border-deep-sky/40 hover:shadow-card transition-all"
+          >
+            <p className="text-sm font-medium text-twilight">Year in review</p>
+            <p className="text-xs text-charcoal/55 mt-0.5">
+              The shape of your wisdom this year — stats, people, moments.
+            </p>
+          </Link>
+        </div>
+      </div>
 
       {/* Data Export */}
       <h3 className="text-lg font-bold text-twilight mb-3">Data Export</h3>

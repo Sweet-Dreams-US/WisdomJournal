@@ -2,18 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Sun, BookOpen, MessageCircle, User, LogOut, Users, UserPlus, X, Flame, Globe, Shield } from "lucide-react";
+import { Sun, BookOpen, MessageCircle, User, LogOut, Users, UserPlus, X, Globe, Shield, Clock, Moon, SunDim } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useSidebar } from "./SidebarProvider";
 import { useEffect } from "react";
 import { useProfile } from "@/lib/hooks/use-profile";
+import StreakEmber from "./StreakEmber";
+import { useTheme } from "./ThemeProvider";
 
 const navItems = [
   { label: "Today", href: "/dashboard", icon: Sun, showStreak: true },
   { label: "Journal", href: "/journal", icon: BookOpen },
   { label: "Encyclopedia", href: "/encyclopedia", icon: Globe },
   { label: "Ask", href: "/ask", icon: MessageCircle },
+  { label: "Capsules", href: "/capsules", icon: Clock },
   { label: "Groups", href: "/groups", icon: Users },
   { label: "Friends", href: "/friends", icon: UserPlus },
   { label: "Profile", href: "/profile", icon: User },
@@ -25,6 +28,7 @@ export default function Sidebar() {
   const router = useRouter();
   const { isOpen, close } = useSidebar();
   const { profile } = useProfile();
+  const { resolved, toggle } = useTheme();
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
@@ -38,8 +42,6 @@ export default function Sidebar() {
     router.refresh();
   }
 
-  const streak = profile?.current_streak ?? 0;
-
   const sidebarContent = (
     <>
       <div className="p-6 border-b border-soft-gray">
@@ -51,15 +53,8 @@ export default function Sidebar() {
         </Link>
       </div>
 
-      {/* Streak indicator */}
-      {streak > 0 && (
-        <div className="px-4 py-3 border-b border-soft-gray">
-          <span className="inline-flex items-center gap-1.5 text-xs text-golden-hour font-medium">
-            <Flame className="w-3.5 h-3.5" />
-            {streak} day streak
-          </span>
-        </div>
-      )}
+      {/* Streak indicator with ember / grace awareness */}
+      <StreakEmber />
 
       <nav className="flex-1 p-4">
         <ul className="space-y-1">
@@ -93,7 +88,15 @@ export default function Sidebar() {
         </ul>
       </nav>
 
-      <div className="p-4 border-t border-soft-gray">
+      <div className="p-4 border-t border-soft-gray space-y-1">
+        <button
+          onClick={toggle}
+          className="flex items-center gap-3 px-4 py-3 rounded-button text-sm font-medium text-charcoal/70 hover:bg-soft-gray hover:text-charcoal transition-colors duration-150 w-full"
+          aria-label="Toggle theme"
+        >
+          {resolved === "dark" ? <SunDim className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          {resolved === "dark" ? "Light mode" : "Dark mode"}
+        </button>
         <button
           onClick={handleSignOut}
           className="flex items-center gap-3 px-4 py-3 rounded-button text-sm font-medium text-charcoal/70 hover:bg-soft-gray hover:text-charcoal transition-colors duration-150 w-full"

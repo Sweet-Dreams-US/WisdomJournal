@@ -4,6 +4,51 @@
 
 @import url("https://fonts.googleapis.com/css2?family=Bungee+Shade&family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200&display=swap");
 
+/* Theme tokens — CSS custom properties switched by .theme-light / .theme-dark on <html>. */
+:root, .theme-light {
+  --surface-base: #FAFBFF;
+  --surface-raised: #FFFFFF;
+  --surface-sunken: #F0F2F5;
+  --surface-glass: rgba(255, 255, 255, 0.75);
+  --text-primary: #2D3748;
+  --text-secondary: rgba(45, 55, 72, 0.65);
+  --text-muted: rgba(45, 55, 72, 0.45);
+  --border-subtle: #F0F2F5;
+  --border-strong: rgba(45, 55, 72, 0.12);
+  --brand-accent: #4A90D9;
+  --brand-warm: #F5A623;
+  --ember-glow: rgba(245, 166, 35, 0.18);
+}
+
+.theme-dark {
+  --surface-base: #0a0e1a;
+  --surface-raised: #111b33;
+  --surface-sunken: #070912;
+  --surface-glass: rgba(17, 27, 51, 0.7);
+  --text-primary: #E6EBF5;
+  --text-secondary: rgba(230, 235, 245, 0.72);
+  --text-muted: rgba(230, 235, 245, 0.45);
+  --border-subtle: rgba(197, 213, 240, 0.08);
+  --border-strong: rgba(197, 213, 240, 0.16);
+  --brand-accent: #7CB9E8;
+  --brand-warm: #F5A623;
+  --ember-glow: rgba(245, 166, 35, 0.35);
+}
+
+.theme-dark body {
+  background: var(--surface-base);
+  color: var(--text-primary);
+}
+
+.theme-dark .bg-white { background-color: var(--surface-raised) !important; }
+.theme-dark .bg-cloud-white { background-color: var(--surface-base) !important; }
+.theme-dark .bg-soft-gray { background-color: var(--surface-sunken) !important; }
+.theme-dark .border-soft-gray { border-color: var(--border-subtle) !important; }
+.theme-dark .text-twilight { color: var(--text-primary) !important; }
+.theme-dark .text-charcoal { color: var(--text-primary) !important; }
+.theme-dark .text-charcoal\/60, .theme-dark .text-charcoal\/70 { color: var(--text-secondary) !important; }
+.theme-dark .text-charcoal\/40, .theme-dark .text-charcoal\/45 { color: var(--text-muted) !important; }
+
 @layer base {
   html {
     @apply scroll-smooth;
@@ -12,6 +57,7 @@
   body {
     @apply font-body text-charcoal bg-cloud-white antialiased;
     font-weight: 400;
+    transition: background-color 200ms ease, color 200ms ease;
   }
 
   h1, h2, h3 {

@@ -1,28 +1,45 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Flame, BookOpen, Sun, PartyPopper, Sparkles, Loader2 } from "lucide-react";
 import StatsCard from "@/components/ui/StatsCard";
 import ProgressDots from "@/components/ui/ProgressDots";
 import QuestionCard from "@/components/app/QuestionCard";
+import QuickCompose from "@/components/app/QuickCompose";
 import Card from "@/components/ui/Card";
+import SerendipityRibbon from "@/components/app/SerendipityRibbon";
+import { drainQueue } from "@/lib/offline/offline-queue";
 import type { UserProfile, DailyQuestionSet } from "@wisdom-journal/shared";
 
 function getGreeting(): string {
   const hour = new Date().getHours();
+  if (hour < 5) return "Still up";
   if (hour < 12) return "Good morning";
   if (hour < 17) return "Good afternoon";
-  return "Good evening";
+  if (hour < 21) return "Good evening";
+  return "Peaceful night";
+}
+
+interface SerendipityCandidate {
+  response_id: string;
+  excerpt: string;
+  category_slug: string | null;
+  category_name: string | null;
+  created_at: string;
+  surface_type: string;
+  context: string;
 }
 
 interface DashboardClientProps {
   profile: UserProfile;
   dailySet: DailyQuestionSet | null;
+  serendipity: SerendipityCandidate | null;
 }
 
 export default function DashboardClient({
   profile,
   dailySet,
+  serendipity,
 }: DashboardClientProps) {
   const firstName = profile.full_name?.split(" ")[0] ?? "there";
   const greeting = getGreeting();
@@ -72,12 +89,32 @@ export default function DashboardClient({
   const totalAll = totalQuestions + bonusItems.length;
   const answeredAll = answeredCount + answeredFollowUps;
 
+  // Drain offline queue on load + when connection returns
+  useEffect(() => {
+    let ignore = false;
+    const run = () => {
+      if (ignore) return;
+      drainQueue().catch(() => null);
+    };
+    run();
+    window.addEventListener("online", run);
+    window.addEventListener("wj-sync-drain", run as EventListener);
+    return () => {
+      ignore = true;
+      window.removeEventListener("online", run);
+      window.removeEventListener("wj-sync-drain", run as EventListener);
+    };
+  }, []);
+
   return (
     <div className="max-w-4xl">
+      {/* Serendipity — "on this day" / resurfaced entry */}
+      <SerendipityRibbon candidate={serendipity} />
+
       {/* Greeting */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-twilight mb-2">
-          {greeting}, {firstName}!
+          {greeting}, {firstName}.
         </h2>
         <p className="text-charcoal/60">
           {allOriginalDone && bonusItems.length === 0
@@ -125,19 +162,39 @@ export default function DashboardClient({
             <ProgressDots total={totalAll} completed={answeredAll} />
           </div>
 
-          {/* Question cards */}
+          {/* Question cards — the first unanswered one becomes an inline QuickCompose */}
           <div className="space-y-3">
-            {originalItems.map((item: any, i: number) => (
-              <QuestionCard
-                key={item.id}
-                question={item.question}
-                isAnswered={item.response_id !== null}
-                responsePreview={undefined}
-                questionNumber={i + 1}
-                categorySlug={item.question?.category?.slug}
-                categoryName={item.question?.category?.name}
-              />
-            ))}
+            {(() => {
+              const firstUnansweredIdx = originalItems.findIndex(
+                (it: any) => !it.response_id
+              );
+              return originalItems.map((item: any, i: number) => {
+                const isAnswered = item.response_id !== null;
+                if (!isAnswered && i === firstUnansweredIdx && dailySet) {
+                  return (
+                    <QuickCompose
+                      key={item.id}
+                      question={item.question}
+                      dailyItemId={item.id}
+                      setId={dailySet.id}
+                      categorySlug={item.question?.category?.slug}
+                      categoryName={item.question?.category?.name}
+                    />
+                  );
+                }
+                return (
+                  <QuestionCard
+                    key={item.id}
+                    question={item.question}
+                    isAnswered={isAnswered}
+                    responsePreview={undefined}
+                    questionNumber={i + 1}
+                    categorySlug={item.question?.category?.slug}
+                    categoryName={item.question?.category?.name}
+                  />
+                );
+              });
+            })()}
           </div>
 
           {/* Follow-up section */}

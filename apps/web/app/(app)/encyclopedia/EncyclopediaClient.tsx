@@ -8,6 +8,7 @@ import type { KnowledgeWebData } from "@/lib/data/get-knowledge-web";
 import type { UserProfile, EncyclopediaStats, CategoryBreakdown } from "@wisdom-journal/shared";
 import { getCategoryStyle } from "@/lib/category-utils";
 import StreakFlame from "@/components/visualizations/StreakFlame";
+import WisdomSearch from "@/components/app/WisdomSearch";
 
 // Dynamic imports to avoid SSR issues with D3
 const KnowledgeWeb = dynamic(
@@ -37,7 +38,7 @@ interface Props {
 }
 
 export default function EncyclopediaClient({ webData, profile, stats }: Props) {
-  const [activeTab, setActiveTab] = useState<"web" | "radar" | "categories">("web");
+  const [activeTab, setActiveTab] = useState<"web" | "radar" | "categories" | "search">("web");
 
   const displayName = profile?.full_name?.split(" ")[0] ?? "Your";
 
@@ -123,6 +124,16 @@ export default function EncyclopediaClient({ webData, profile, stats }: Props) {
         >
           Categories
         </button>
+        <button
+          onClick={() => setActiveTab("search")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium font-body transition-all ${
+            activeTab === "search"
+              ? "bg-white text-twilight shadow-sm"
+              : "text-charcoal/60 hover:text-charcoal"
+          }`}
+        >
+          Search
+        </button>
       </div>
 
       {/* Content */}
@@ -161,6 +172,12 @@ export default function EncyclopediaClient({ webData, profile, stats }: Props) {
             </Card>
           )}
         </div>
+      )}
+
+      {activeTab === "search" && (
+        <Card padding="md">
+          <WisdomSearch autoFocus />
+        </Card>
       )}
 
       {activeTab === "categories" && stats && (

@@ -2,6 +2,7 @@ import Sidebar from "@/components/app/Sidebar";
 import AppHeader from "@/components/app/AppHeader";
 import SidebarProvider from "@/components/app/SidebarProvider";
 import OnboardingGuard from "@/components/app/OnboardingGuard";
+import CommandPalette from "@/components/app/CommandPalette";
 
 export default function AppLayout({
   children,
@@ -17,6 +18,7 @@ export default function AppLayout({
             <AppHeader />
             <main className="p-4 md:p-8">{children}</main>
           </div>
+          <CommandPalette />
         </div>
       </SidebarProvider>
     </OnboardingGuard>
