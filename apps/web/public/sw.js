@@ -1,35 +1,48 @@
-// Wisdom Journal service worker
-// Handles offline shell caching, offline capture queue, and web push.
+// Wisdom Journal service worker — minimal, safe.
+//
+// Decision: do NOT intercept navigations. App Router pages depend on live
+// cookies/auth, and a cached nav response served to a different session can
+// leak (or show) the wrong user's page. We only:
+//   - precache a tiny shell so icons/manifest work offline
+//   - stale-while-revalidate /_next/static and /icons assets
+//   - deliver web-push notifications
+//
+// Anything navigation-ish goes straight to the network. If the network is
+// offline, the browser shows its standard offline page.
 
-const CACHE_VERSION = "wj-v1";
-const SHELL_CACHE = `${CACHE_VERSION}-shell`;
-const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
+const CACHE_VERSION = "wj-v3";
+const ASSET_CACHE = `${CACHE_VERSION}-assets`;
 
-// Minimal shell — Next.js fingerprints its assets, so we cache network-first
-// and fall back to what we have. We cache the dashboard route on install.
-const PRECACHE_URLS = ["/", "/dashboard", "/manifest.json", "/icons/icon-192.svg", "/icons/icon-512.svg"];
+const PRECACHE_URLS = [
+  "/manifest.json",
+  "/icons/icon-192.svg",
+  "/icons/icon-512.svg",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(SHELL_CACHE).then((cache) => cache.addAll(PRECACHE_URLS).catch(() => null))
+    caches
+      .open(ASSET_CACHE)
+      .then((cache) => cache.addAll(PRECACHE_URLS).catch(() => null))
   );
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
+    (async () => {
+      // Purge ALL previous caches (including old page caches from wj-v1/v2)
+      const keys = await caches.keys();
+      await Promise.all(
         keys
-          .filter((k) => !k.startsWith(CACHE_VERSION))
+          .filter((k) => k !== ASSET_CACHE)
           .map((k) => caches.delete(k))
-      )
-    )
+      );
+      await self.clients.claim();
+    })()
   );
-  self.clients.claim();
 });
 
-// Network-first for navigation; stale-while-revalidate for static assets
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
@@ -37,52 +50,39 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Never cache API calls or auth flows
-  if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/auth/")) return;
-
-  if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request)
-        .then((res) => {
-          const copy = res.clone();
-          caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, copy));
-          return res;
-        })
-        .catch(() => caches.match(request).then((cached) => cached || caches.match("/dashboard")))
-    );
+  // Never touch navigations — always let the network handle them.
+  if (request.mode === "navigate") return;
+  // Never cache API, auth, or Next.js data routes.
+  if (
+    url.pathname.startsWith("/api/") ||
+    url.pathname.startsWith("/auth/") ||
+    url.pathname.startsWith("/_next/data/")
+  ) {
     return;
   }
 
-  if (url.pathname.startsWith("/_next/static") || url.pathname.startsWith("/icons/")) {
+  // Stale-while-revalidate for versioned static assets only.
+  if (
+    url.pathname.startsWith("/_next/static") ||
+    url.pathname.startsWith("/icons/") ||
+    url.pathname === "/manifest.json"
+  ) {
     event.respondWith(
       caches.match(request).then((cached) => {
-        const fetchPromise = fetch(request)
+        const networkFetch = fetch(request)
           .then((res) => {
-            const copy = res.clone();
-            caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, copy));
+            if (res.ok) {
+              const copy = res.clone();
+              caches.open(ASSET_CACHE).then((cache) => cache.put(request, copy));
+            }
             return res;
           })
           .catch(() => cached);
-        return cached || fetchPromise;
+        return cached || networkFetch;
       })
     );
   }
 });
-
-// Background sync for offline response drafts
-self.addEventListener("sync", (event) => {
-  if (event.tag === "wj-response-sync") {
-    event.waitUntil(drainResponseQueue());
-  }
-});
-
-async function drainResponseQueue() {
-  // Drafts are queued in IndexedDB via the offline-queue.ts module on the client
-  const clientsList = await self.clients.matchAll({ includeUncontrolled: true });
-  for (const client of clientsList) {
-    client.postMessage({ type: "SYNC_DRAIN" });
-  }
-}
 
 // Web push notification handling
 self.addEventListener("push", (event) => {
@@ -116,4 +116,17 @@ self.addEventListener("notificationclick", (event) => {
       if (self.clients.openWindow) return self.clients.openWindow(target);
     })
   );
+});
+
+// Message-driven triggers
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+    return;
+  }
+  if (event.data?.type === "DRAIN_QUEUE") {
+    self.clients.matchAll({ includeUncontrolled: true }).then((list) => {
+      for (const client of list) client.postMessage({ type: "SYNC_DRAIN" });
+    });
+  }
 });
