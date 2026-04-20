@@ -72,6 +72,13 @@ export async function getProfile(): Promise<UserProfile | null> {
       .single();
 
     if (insertError) {
+      // Fall through: select via service role in case RLS blocked the earlier read.
+      const { data: existing } = await admin
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (existing) return existing as UserProfile;
       console.error("Failed to create profile:", insertError);
       return null;
     }
