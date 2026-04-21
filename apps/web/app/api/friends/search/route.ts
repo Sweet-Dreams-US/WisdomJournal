@@ -23,14 +23,33 @@ export async function GET(request: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // Search discoverable profiles by name or email (exclude self)
-  const { data: profiles } = await admin
-    .from("profiles")
-    .select("id, full_name, avatar_url, bio, current_streak, total_responses")
-    .eq("is_discoverable", true)
-    .neq("id", user.id)
-    .or(`full_name.ilike.%${q}%,email.ilike.%${q}%`)
-    .limit(20);
+  // Postgrest's `.or("a.ilike.X,b.ilike.Y")` uses both `,` and `.` as
+  // grammar characters, so values containing dots (e.g. "cole@sweetdreams.us")
+  // get parsed incorrectly and match nothing. Run two separate ilike queries
+  // and merge the results instead.
+  const pattern = `%${q}%`;
+
+  const [byName, byEmail] = await Promise.all([
+    admin
+      .from("profiles")
+      .select("id, full_name, avatar_url, bio, current_streak, total_responses")
+      .eq("is_discoverable", true)
+      .neq("id", user.id)
+      .ilike("full_name", pattern)
+      .limit(20),
+    admin
+      .from("profiles")
+      .select("id, full_name, avatar_url, bio, current_streak, total_responses")
+      .eq("is_discoverable", true)
+      .neq("id", user.id)
+      .ilike("email", pattern)
+      .limit(20),
+  ]);
+
+  const merged = new Map<string, any>();
+  for (const row of byName.data ?? []) merged.set(row.id, row);
+  for (const row of byEmail.data ?? []) if (!merged.has(row.id)) merged.set(row.id, row);
+  const profiles = [...merged.values()].slice(0, 20);
 
   // Get existing friendships to mark status
   const { data: existingFriendships } = await admin
@@ -45,7 +64,7 @@ export async function GET(request: NextRequest) {
     friendshipMap.set(otherId, { id: f.id, status: f.status });
   }
 
-  const results = (profiles ?? []).map((p: any) => ({
+  const results = profiles.map((p: any) => ({
     ...p,
     friendship: friendshipMap.get(p.id) ?? null,
   }));
