@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 
+/**
+ * Search discoverable profiles by first name, last name, email, or username.
+ *
+ * We run one ilike query per column and merge, because Supabase-js's
+ * `.or("a.ilike.X,b.ilike.Y")` string uses both `,` and `.` as grammar,
+ * so values with dots (emails, usernames with underscores and dots) get
+ * parsed wrong and match nothing.
+ *
+ * Results are deduped by id, with username-exact matches bubbled to the top.
+ */
 export async function GET(request: NextRequest) {
   const supabase = createClient();
 
@@ -13,45 +23,71 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const q = request.nextUrl.searchParams.get("q")?.trim();
-  if (!q || q.length < 2) {
+  const raw = request.nextUrl.searchParams.get("q")?.trim() ?? "";
+  if (raw.length < 2) {
     return NextResponse.json({ users: [] });
   }
+
+  // Allow "@username" prefix as a convenience
+  const q = raw.startsWith("@") ? raw.slice(1) : raw;
+  const pattern = `%${q}%`;
 
   const admin = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // Postgrest's `.or("a.ilike.X,b.ilike.Y")` uses both `,` and `.` as
-  // grammar characters, so values containing dots (e.g. "cole@sweetdreams.us")
-  // get parsed incorrectly and match nothing. Run two separate ilike queries
-  // and merge the results instead.
-  const pattern = `%${q}%`;
+  const SELECT_COLUMNS =
+    "id, full_name, username, avatar_url, bio, current_streak, total_responses, email";
 
-  const [byName, byEmail] = await Promise.all([
+  const runIlike = (column: "full_name" | "email" | "username") =>
     admin
       .from("profiles")
-      .select("id, full_name, avatar_url, bio, current_streak, total_responses")
+      .select(SELECT_COLUMNS)
       .eq("is_discoverable", true)
       .neq("id", user.id)
-      .ilike("full_name", pattern)
-      .limit(20),
-    admin
-      .from("profiles")
-      .select("id, full_name, avatar_url, bio, current_streak, total_responses")
-      .eq("is_discoverable", true)
-      .neq("id", user.id)
-      .ilike("email", pattern)
-      .limit(20),
+      .ilike(column, pattern)
+      .limit(25);
+
+  const [byName, byEmail, byUsername] = await Promise.all([
+    runIlike("full_name"),
+    runIlike("email"),
+    runIlike("username"),
   ]);
 
-  const merged = new Map<string, any>();
-  for (const row of byName.data ?? []) merged.set(row.id, row);
-  for (const row of byEmail.data ?? []) if (!merged.has(row.id)) merged.set(row.id, row);
-  const profiles = [...merged.values()].slice(0, 20);
+  type ProfileRow = {
+    id: string;
+    full_name: string | null;
+    username: string | null;
+    avatar_url: string | null;
+    bio: string | null;
+    current_streak: number;
+    total_responses: number;
+    email: string;
+  };
 
-  // Get existing friendships to mark status
+  const merged = new Map<string, ProfileRow & { _match: "username" | "name" | "email" }>();
+  for (const row of (byUsername.data ?? []) as ProfileRow[])
+    merged.set(row.id, { ...row, _match: "username" });
+  for (const row of (byName.data ?? []) as ProfileRow[])
+    if (!merged.has(row.id)) merged.set(row.id, { ...row, _match: "name" });
+  for (const row of (byEmail.data ?? []) as ProfileRow[])
+    if (!merged.has(row.id)) merged.set(row.id, { ...row, _match: "email" });
+
+  // Bubble exact username match to the top
+  const profiles = [...merged.values()].sort((a, b) => {
+    const aExact = a.username && a.username.toLowerCase() === q.toLowerCase() ? 1 : 0;
+    const bExact = b.username && b.username.toLowerCase() === q.toLowerCase() ? 1 : 0;
+    if (aExact !== bExact) return bExact - aExact;
+    // then by match-tier: username > name > email
+    const tier = (m: string) => (m === "username" ? 0 : m === "name" ? 1 : 2);
+    return tier(a._match) - tier(b._match);
+  });
+
+  // Strip email from response (privacy — we only use it for searching)
+  const publicProfiles = profiles.map(({ email: _e, _match, ...rest }) => rest).slice(0, 20);
+
+  // Existing friendships to mark status
   const { data: existingFriendships } = await admin
     .from("friendships")
     .select("id, user_a, user_b, status, requested_by")
@@ -64,7 +100,7 @@ export async function GET(request: NextRequest) {
     friendshipMap.set(otherId, { id: f.id, status: f.status });
   }
 
-  const results = profiles.map((p: any) => ({
+  const results = publicProfiles.map((p: any) => ({
     ...p,
     friendship: friendshipMap.get(p.id) ?? null,
   }));

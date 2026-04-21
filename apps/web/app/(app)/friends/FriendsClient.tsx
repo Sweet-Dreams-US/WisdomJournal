@@ -24,6 +24,7 @@ type Tab = "friends" | "requests" | "search";
 interface SearchResult {
   id: string;
   full_name: string | null;
+  username: string | null;
   avatar_url: string | null;
   bio: string | null;
   current_streak: number;
@@ -307,7 +308,7 @@ export default function FriendsClient({ friends }: { friends: FriendsResult }) {
             <div className="flex-1">
               <Input
                 variant="light"
-                placeholder="Search by name or email..."
+                placeholder="Search by name, @username, or email…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -340,12 +341,13 @@ export default function FriendsClient({ friends }: { friends: FriendsResult }) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-charcoal truncate">
-                      {u.full_name ?? "Unknown"}
+                      {u.full_name ?? u.username ?? "Unknown"}
                     </p>
+                    {u.username && (
+                      <p className="text-xs text-deep-sky/80 truncate">@{u.username}</p>
+                    )}
                     {u.bio && (
-                      <p className="text-xs text-charcoal/50 truncate">
-                        {u.bio}
-                      </p>
+                      <p className="text-xs text-charcoal/50 truncate">{u.bio}</p>
                     )}
                   </div>
                   {u.friendship?.status === "accepted" ? (

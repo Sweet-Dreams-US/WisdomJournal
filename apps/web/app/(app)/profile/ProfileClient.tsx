@@ -16,6 +16,7 @@ import Card from "@/components/ui/Card";
 import StatsCard from "@/components/ui/StatsCard";
 import Button from "@/components/ui/Button";
 import LegacySection from "@/components/app/LegacySection";
+import UsernameEditor from "@/components/app/UsernameEditor";
 import type {
   UserProfile,
   EncyclopediaStats,
@@ -120,6 +121,9 @@ export default function ProfileClient({
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-xl font-bold text-twilight">{profile.full_name}</h3>
+            {profile.username && (
+              <p className="text-sm text-deep-sky font-medium">@{profile.username}</p>
+            )}
             <p className="text-sm text-charcoal/60">{profile.email}</p>
             {profile.bio && (
               <p className="text-sm text-charcoal/70 mt-1">{profile.bio}</p>
@@ -128,6 +132,8 @@ export default function ProfileClient({
           </div>
         </div>
       </Card>
+
+      <UsernameEditor initial={profile.username ?? ""} />
 
       {/* Encyclopedia stats */}
       <h3 className="text-lg font-bold text-twilight mb-3">Your Encyclopedia</h3>

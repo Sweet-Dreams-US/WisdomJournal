@@ -17,6 +17,7 @@ export async function PATCH(request: NextRequest) {
   // Only allow updating specific fields
   const allowedFields = [
     "full_name",
+    "username",
     "bio",
     "timezone",
     "ai_personality_enabled",
@@ -29,6 +30,24 @@ export async function PATCH(request: NextRequest) {
   for (const key of allowedFields) {
     if (key in body) {
       updates[key] = body[key];
+    }
+  }
+
+  // Validate username shape before hitting the DB for a cleaner error message
+  if (typeof updates.username === "string") {
+    const normalized = updates.username.trim().toLowerCase();
+    if (normalized === "") {
+      updates.username = null;
+    } else if (!/^[a-z0-9_]{3,32}$/.test(normalized)) {
+      return NextResponse.json(
+        {
+          error:
+            "Username must be 3–32 characters, lowercase letters, numbers, or underscores.",
+        },
+        { status: 400 }
+      );
+    } else {
+      updates.username = normalized;
     }
   }
 
@@ -47,6 +66,13 @@ export async function PATCH(request: NextRequest) {
     .single();
 
   if (error) {
+    // Friendlier error on unique violation for username
+    if (error.code === "23505" && "username" in updates) {
+      return NextResponse.json(
+        { error: "That username is taken. Try another." },
+        { status: 409 }
+      );
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 

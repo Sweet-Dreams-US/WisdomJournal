@@ -104,6 +104,7 @@ export async function getProfile(): Promise<UserProfile | null> {
         user.user_metadata?.name ??
         user.email?.split("@")[0] ??
         null,
+      username: null,
       avatar_url: user.user_metadata?.avatar_url ?? null,
       bio: null,
       timezone: null,
