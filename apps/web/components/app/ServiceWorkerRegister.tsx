@@ -3,61 +3,53 @@
 import { useEffect } from "react";
 
 /**
- * Registers the service worker in production and, on every mount, purges
- * any stale HTML caches a previous worker may have saved. We also force a
- * check-for-update so a new SW version takes over quickly after a deploy.
+ * Cleanup-only component.
  *
- * If the user has an older v1 SW that was caching navigations, this will
- * purge all its caches on next activation (see sw.js 'activate' handler)
- * and the user will get fresh pages from the network.
+ * We briefly shipped a service worker that cached navigation responses and
+ * caused stale/wrong pages. Rather than try to push a replacement into the
+ * user's browser (SW updates can lag behind), this component:
+ *
+ *   1. Registers /sw.js (now a tombstone that unregisters itself on activate)
+ *   2. Unregisters any lingering SW registrations proactively
+ *   3. Purges all caches on this origin
+ *   4. Listens for a reload message from the tombstone and refreshes once
+ *
+ * Once every user has rotated through at least one page load with this in
+ * place, we can delete this component and sw.js entirely.
  */
 export default function ServiceWorkerRegister() {
   useEffect(() => {
+    if (typeof window === "undefined") return;
     if (!("serviceWorker" in navigator)) return;
-    if (process.env.NODE_ENV !== "production") return;
 
     const controller = new AbortController();
 
+    // 1. Let the tombstone SW take over (if one is present).
     navigator.serviceWorker
       .register("/sw.js", { scope: "/" })
-      .then((reg) => {
-        // Force an update check immediately so a new deploy takes effect.
-        reg.update().catch(() => null);
+      .catch(() => null);
 
-        // When a waiting worker exists, skip it forward without a hard reload.
-        if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
+    // 2. Proactively unregister every SW for this origin.
+    navigator.serviceWorker
+      .getRegistrations()
+      .then((regs) => Promise.all(regs.map((r) => r.unregister().catch(() => null))))
+      .catch(() => null);
 
-        reg.addEventListener("updatefound", () => {
-          const next = reg.installing;
-          if (!next) return;
-          next.addEventListener("statechange", () => {
-            if (next.state === "installed" && navigator.serviceWorker.controller) {
-              // A new SW is installed and an old one is active — switch over.
-              next.postMessage({ type: "SKIP_WAITING" });
-            }
-          });
-        });
-      })
-      .catch((err) => console.warn("SW registration failed:", err));
-
-    // Also proactively clear any runtime cache that might hold HTML from a
-    // buggy previous version. Safe because the new SW never writes there.
+    // 3. Purge any caches left behind by the old worker.
     if (typeof caches !== "undefined") {
       caches
         .keys()
-        .then((keys) =>
-          Promise.all(
-            keys
-              .filter((k) => k.startsWith("wj-v1") || k.startsWith("wj-v2"))
-              .map((k) => caches.delete(k))
-          )
-        )
+        .then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
         .catch(() => null);
     }
 
+    // 4. If the tombstone asks us to reload, do it exactly once.
     const onMessage = (event: MessageEvent) => {
-      if (event.data?.type === "SYNC_DRAIN") {
-        window.dispatchEvent(new CustomEvent("wj-sync-drain"));
+      if (event.data?.type === "SW_TOMBSTONE_RELOAD") {
+        const already = sessionStorage.getItem("wj-sw-reloaded");
+        if (already) return;
+        sessionStorage.setItem("wj-sw-reloaded", "1");
+        window.location.reload();
       }
     };
     navigator.serviceWorker.addEventListener("message", onMessage, {

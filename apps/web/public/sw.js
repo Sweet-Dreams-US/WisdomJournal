@@ -1,132 +1,49 @@
-// Wisdom Journal service worker — minimal, safe.
+// Wisdom Journal service worker — tombstone / kill-switch.
 //
-// Decision: do NOT intercept navigations. App Router pages depend on live
-// cookies/auth, and a cached nav response served to a different session can
-// leak (or show) the wrong user's page. We only:
-//   - precache a tiny shell so icons/manifest work offline
-//   - stale-while-revalidate /_next/static and /icons assets
-//   - deliver web-push notifications
+// A previous version (v1) was incorrectly caching navigation responses,
+// which caused users to see stale or wrong pages when clicking sidebar
+// links. Rather than try to repair it in place (which requires users to
+// hard-refresh), this version takes over, deletes every cache, unregisters
+// itself, and reloads any open tabs so the browser falls back to normal
+// (no-SW) behavior.
 //
-// Anything navigation-ish goes straight to the network. If the network is
-// offline, the browser shows its standard offline page.
+// We will re-add PWA/offline support later with a carefully-scoped worker
+// that never touches navigations.
 
-const CACHE_VERSION = "wj-v3";
-const ASSET_CACHE = `${CACHE_VERSION}-assets`;
-
-const PRECACHE_URLS = [
-  "/manifest.json",
-  "/icons/icon-192.svg",
-  "/icons/icon-512.svg",
-];
-
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches
-      .open(ASSET_CACHE)
-      .then((cache) => cache.addAll(PRECACHE_URLS).catch(() => null))
-  );
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
-      // Purge ALL previous caches (including old page caches from wj-v1/v2)
+      // Purge every cache this origin has.
       const keys = await caches.keys();
-      await Promise.all(
-        keys
-          .filter((k) => k !== ASSET_CACHE)
-          .map((k) => caches.delete(k))
-      );
+      await Promise.all(keys.map((k) => caches.delete(k)));
+
+      // Take control of any currently-open tabs so the next navigation
+      // goes through this (pass-through) worker rather than the old one.
       await self.clients.claim();
+
+      // Reload every controlled tab so the browser re-evaluates its
+      // registration and drops the old controller.
+      const tabs = await self.clients.matchAll({ type: "window" });
+      for (const tab of tabs) {
+        try {
+          tab.postMessage({ type: "SW_TOMBSTONE_RELOAD" });
+        } catch {}
+      }
+
+      // Unregister self so future navigations go directly to the network.
+      try {
+        await self.registration.unregister();
+      } catch {}
     })()
   );
 });
 
-self.addEventListener("fetch", (event) => {
-  const { request } = event;
-  if (request.method !== "GET") return;
-
-  const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return;
-
-  // Never touch navigations — always let the network handle them.
-  if (request.mode === "navigate") return;
-  // Never cache API, auth, or Next.js data routes.
-  if (
-    url.pathname.startsWith("/api/") ||
-    url.pathname.startsWith("/auth/") ||
-    url.pathname.startsWith("/_next/data/")
-  ) {
-    return;
-  }
-
-  // Stale-while-revalidate for versioned static assets only.
-  if (
-    url.pathname.startsWith("/_next/static") ||
-    url.pathname.startsWith("/icons/") ||
-    url.pathname === "/manifest.json"
-  ) {
-    event.respondWith(
-      caches.match(request).then((cached) => {
-        const networkFetch = fetch(request)
-          .then((res) => {
-            if (res.ok) {
-              const copy = res.clone();
-              caches.open(ASSET_CACHE).then((cache) => cache.put(request, copy));
-            }
-            return res;
-          })
-          .catch(() => cached);
-        return cached || networkFetch;
-      })
-    );
-  }
-});
-
-// Web push notification handling
-self.addEventListener("push", (event) => {
-  let payload = { title: "Wisdom Journal", body: "Your question is ready." };
-  try {
-    if (event.data) payload = event.data.json();
-  } catch {
-    if (event.data) payload.body = event.data.text();
-  }
-
-  const options = {
-    body: payload.body,
-    icon: "/icons/icon-192.svg",
-    badge: "/icons/icon-192.svg",
-    tag: payload.tag || "daily-question",
-    requireInteraction: false,
-    data: { url: payload.url || "/dashboard" },
-  };
-
-  event.waitUntil(self.registration.showNotification(payload.title, options));
-});
-
-self.addEventListener("notificationclick", (event) => {
-  event.notification.close();
-  const target = event.notification.data?.url || "/dashboard";
-  event.waitUntil(
-    self.clients.matchAll({ type: "window" }).then((list) => {
-      for (const c of list) {
-        if (c.url.includes(target) && "focus" in c) return c.focus();
-      }
-      if (self.clients.openWindow) return self.clients.openWindow(target);
-    })
-  );
-});
-
-// Message-driven triggers
-self.addEventListener("message", (event) => {
-  if (event.data?.type === "SKIP_WAITING") {
-    self.skipWaiting();
-    return;
-  }
-  if (event.data?.type === "DRAIN_QUEUE") {
-    self.clients.matchAll({ includeUncontrolled: true }).then((list) => {
-      for (const client of list) client.postMessage({ type: "SYNC_DRAIN" });
-    });
-  }
+// Pass-through for every fetch. Do NOT serve anything from the SW.
+self.addEventListener("fetch", () => {
+  // Intentionally empty — respondWith not called, so the browser handles
+  // the request as if no service worker existed.
 });
