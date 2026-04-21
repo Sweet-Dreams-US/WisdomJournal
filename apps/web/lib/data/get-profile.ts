@@ -29,13 +29,17 @@ export async function getProfile(): Promise<UserProfile | null> {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    // Prefer service-role read — bypasses any RLS weirdness.
+    // Only trust the service-role key if it *looks* like a complete JWT.
+    // Supabase service-role keys are JWTs (3 dot-separated segments).
+    // A truncated key is worse than no key: it authenticates as the
+    // unauthenticated anon role but signals "service_role" so RLS fails.
+    const keyLooksValid = !!serviceKey && serviceKey.split(".").length === 3 && serviceKey.length > 180;
     const admin =
-      supabaseUrl && serviceKey ? createServiceClient(supabaseUrl, serviceKey) : null;
+      supabaseUrl && keyLooksValid ? createServiceClient(supabaseUrl, serviceKey) : null;
 
-    const readClient = admin ?? (supabase as unknown as ReturnType<typeof createServiceClient>);
-
-    const { data } = await readClient
+    // Prefer the authed client: RLS policy "Users can view their own profile"
+    // allows auth.uid() = id which is exactly what we want.
+    const { data } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", user.id)
