@@ -1,34 +1,24 @@
 # Wisdom Journal — Beta Launch Checklist
 
-Last updated: July 16, 2026. The app is code-complete for the test-user
-phase: build passes, every core flow was verified end-to-end in a browser,
-and the database migrations (through 038) are applied to the live Supabase
-project.
+Last updated: July 16, 2026 (evening). **The app is deployed**: pushing to
+`main` on GitHub auto-deploys to Vercel. Database migrations through 041
+are applied to the live Supabase project.
 
-## 1. Deploy to Vercel (~15 minutes)
+## 1. Deployment — DONE ✓
 
-1. Push this repo to GitHub (if not already) and import it in Vercel.
-2. Framework preset: **Next.js**. Root directory: `apps/web`.
-   (Vercel detects the Turborepo automatically; if asked, build command
-   `cd ../.. && npx turbo build --filter=@wisdom-journal/web` or accept the default.)
-3. Set the environment variables (Production + Preview):
-
-   | Variable | Where to get it |
-   |---|---|
-   | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API |
-   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | same page |
-   | `SUPABASE_SERVICE_ROLE_KEY` | same page (keep secret) |
-   | `OPENROUTER_API_KEY` | openrouter.ai → Keys |
-   | `NEXT_PUBLIC_SITE_URL` | your production URL, e.g. `https://wisdomjournal.app` |
-   | `NEXT_PUBLIC_APP_URL` | same as above (used in email links) |
-   | `RESEND_API_KEY` | resend.com → API Keys (email notifications) |
-   | `RESEND_FROM_EMAIL` | a verified sender, e.g. `Wisdom Journal <hello@yourdomain>` |
-   | `CRON_SECRET` | any long random string — protects the reminder cron |
-
-4. `apps/web/vercel.json` already schedules the daily-reminder cron
-   (14:00 UTC). Vercel sends `Authorization: Bearer $CRON_SECRET` automatically.
-5. Deploy, then open the production URL and click through
-   register → onboarding → answer → journal → ask.
+- Production: **https://wisdom-journal.vercel.app**
+- Vercel project `wisdom-journal` (team *Sweet Dreams' projects*), root
+  directory `apps/web`, linked to github.com/colemarcuccilli/WisdomJournal
+  — every push to `main` deploys automatically.
+- All env vars are set in Vercel (Supabase keys, `OPENROUTER_API_KEY`,
+  `RESEND_API_KEY`, `CRON_SECRET`, `NEXT_PUBLIC_SITE_URL`,
+  `NEXT_PUBLIC_APP_URL`). If you buy a custom domain, update the two
+  `NEXT_PUBLIC_*_URL` vars.
+- `apps/web/vercel.json` schedules the daily-reminder cron (14:00 UTC).
+- `RESEND_FROM_EMAIL` is unset — emails fall back to
+  `noreply@wisdomjournal.app`, which only delivers if that domain is
+  verified in Resend. Set it to a verified sender before relying on
+  email notifications.
 
 ## 2. Supabase production settings (~10 minutes)
 
@@ -83,11 +73,30 @@ project.
   mobile stat-card layout, pluralization cleanup, GSAP fixes (blank
   streak card, cross-component animation kills).
 
-## 5. Known deferred items (fine for beta)
+## 5. Path to the app stores
+
+The app is now an installable **PWA** — on a phone, "Add to Home Screen"
+gives a standalone app with the Wisdom icon today. For real store
+listings:
+
+- **Google Play**: wrap the PWA as a Trusted Web Activity (TWA) with
+  [Bubblewrap](https://github.com/GoogleChromeLabs/bubblewrap) or
+  pwabuilder.com — a few hours of work, needs a Play developer account
+  ($25 one-time) and a `assetlinks.json` file served from the domain.
+- **Apple App Store**: wrap with [Capacitor](https://capacitorjs.com)
+  (WebView shell around the deployed site, plus native plugins later for
+  push notifications/microphone) — needs an Apple Developer account
+  ($99/yr) and Xcode. Apple rejects thin wrappers with no native value,
+  so plan to add native push + haptics + share-sheet in the wrapper.
+- Both wrappers point at the SAME deployed web app, so web and store
+  versions stay identical automatically — exactly the "either or can be
+  used" goal.
+
+## 6. Known deferred items (fine for beta)
 
 - Stripe/payments (pricing page is display-only; beta is free).
-- Native mobile app (spec section 8) — the web app is responsive.
 - Voice *audio storage* (voice input transcribes to text; audio isn't kept).
+- Google OAuth production redirect config (you're handling this).
 - `.claude/worktrees/crazy-goldstine` is a leftover session worktree —
   delete whenever (`git worktree remove` or delete the folder).
 
