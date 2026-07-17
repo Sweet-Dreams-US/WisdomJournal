@@ -49,6 +49,18 @@ export type {
 // Types — Category
 export type { Category, Subcategory } from "./types/category";
 
+// Types — Organization
+export type {
+  Organization,
+  Department,
+  OrganizationMember,
+  OrganizationInvitation,
+  OrganizationRole,
+  OrganizationMemberStatus,
+  OrganizationInvitationRole,
+  OrganizationSizeRange,
+} from "./types/organizations";
+
 // Types — Stats & Achievements
 export type {
   StreakStats,
@@ -74,5 +86,5 @@ export type {
 
 // Constants
 export { APP_NAME, APP_DESCRIPTION, SUBSCRIPTION_TIERS, NAV_ITEMS } from "./constants/config";
-export { CATEGORIES } from "./constants/categories";
-export type { CategorySlug } from "./constants/categories";
+export { CATEGORIES, BUSINESS_CATEGORIES } from "./constants/categories";
+export type { CategorySlug, BusinessCategorySlug } from "./constants/categories";

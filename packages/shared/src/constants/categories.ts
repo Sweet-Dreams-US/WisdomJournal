@@ -146,3 +146,53 @@ export const CATEGORIES = [
 ] as const;
 
 export type CategorySlug = (typeof CATEGORIES)[number]["slug"];
+
+// Business-context categories (migration 042). Kept separate from
+// CATEGORIES on purpose — personal UIs iterate CATEGORIES and must not
+// surface these.
+export const BUSINESS_CATEGORIES = [
+  {
+    slug: "decision_making",
+    name: "Decision Making",
+    description: "How you weigh options, judge risk, and make the calls that matter",
+    icon: "scale",
+    subcategories: [],
+  },
+  {
+    slug: "process_systems",
+    name: "Process & Systems",
+    description: "How things actually get done — workflows, tools, and the why behind them",
+    icon: "workflow",
+    subcategories: [],
+  },
+  {
+    slug: "stakeholders",
+    name: "Relationships & Stakeholders",
+    description: "Clients, vendors, partners — histories, preferences, and how to work with them",
+    icon: "handshake",
+    subcategories: [],
+  },
+  {
+    slug: "crisis_challenges",
+    name: "Crisis & Challenges",
+    description: "Hard moments, what went wrong, and what got you through",
+    icon: "shield-alert",
+    subcategories: [],
+  },
+  {
+    slug: "institutional_knowledge",
+    name: "Institutional Knowledge",
+    description: "The history, context, and unwritten rules only experience teaches",
+    icon: "landmark",
+    subcategories: [],
+  },
+  {
+    slug: "leadership_management",
+    name: "Leadership & Management",
+    description: "Hiring, growing people, culture, and leading through change",
+    icon: "users",
+    subcategories: [],
+  },
+] as const;
+
+export type BusinessCategorySlug = (typeof BUSINESS_CATEGORIES)[number]["slug"];

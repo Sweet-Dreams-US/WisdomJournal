@@ -10,6 +10,12 @@ import {
   Compass,
   BookOpen,
   Sun,
+  Scale,
+  Workflow,
+  Handshake,
+  ShieldAlert,
+  Landmark,
+  Users2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -74,6 +80,37 @@ const categoryStyles: Record<string, CategoryStyle> = {
     icon: Sun,
     color: "text-yellow-500",
     bgColor: "bg-yellow-50",
+  },
+  // Business categories (migration 042)
+  decision_making: {
+    icon: Scale,
+    color: "text-indigo-600",
+    bgColor: "bg-indigo-50",
+  },
+  process_systems: {
+    icon: Workflow,
+    color: "text-cyan-600",
+    bgColor: "bg-cyan-50",
+  },
+  stakeholders: {
+    icon: Handshake,
+    color: "text-teal-600",
+    bgColor: "bg-teal-50",
+  },
+  crisis_challenges: {
+    icon: ShieldAlert,
+    color: "text-red-500",
+    bgColor: "bg-red-50",
+  },
+  institutional_knowledge: {
+    icon: Landmark,
+    color: "text-stone-600",
+    bgColor: "bg-stone-100",
+  },
+  leadership_management: {
+    icon: Users2,
+    color: "text-blue-600",
+    bgColor: "bg-blue-50",
   },
 };
 
