@@ -26,7 +26,7 @@ export async function GET() {
   const admin = createServiceClient(supabaseUrl, serviceKey);
 
   // Fetch stats in parallel
-  const [usersRes, responsesRes, activeRes, codesRes, recentRes] = await Promise.all([
+  const [usersRes, responsesRes, activeRes, codesRes, recentRes, feedbackRes] = await Promise.all([
     admin.from("profiles").select("id", { count: "exact", head: true }),
     admin.from("responses").select("id", { count: "exact", head: true }).is("deleted_at", null),
     admin.from("responses")
@@ -38,6 +38,10 @@ export async function GET() {
       .select("id, email, full_name, total_responses, current_streak, created_at, beta_code_used, is_admin")
       .order("created_at", { ascending: false })
       .limit(20),
+    admin.from("feedback")
+      .select("id, type, message, page_url, status, created_at, profile:profiles(full_name, email)")
+      .order("created_at", { ascending: false })
+      .limit(50),
   ]);
 
   const activeUserIds = new Set((activeRes.data || []).map((r: any) => r.user_id));
@@ -48,5 +52,6 @@ export async function GET() {
     active_users_7d: activeUserIds.size,
     beta_codes: codesRes.data || [],
     recent_users: recentRes.data || [],
+    feedback: feedbackRes.data || [],
   });
 }

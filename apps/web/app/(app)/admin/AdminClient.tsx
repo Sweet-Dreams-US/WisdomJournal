@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Users, FileText, Flame, Key, Shield, UserX, Plus } from "lucide-react";
+import { Users, FileText, Flame, Key, Shield, UserX, Plus, Bug, Lightbulb, Heart, MessageCircle } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -12,6 +12,17 @@ interface AdminStats {
   active_users_7d: number;
   beta_codes: BetaCode[];
   recent_users: AdminUser[];
+  feedback: FeedbackItem[];
+}
+
+interface FeedbackItem {
+  id: string;
+  type: "bug" | "idea" | "praise" | "other";
+  message: string;
+  page_url: string | null;
+  status: "new" | "reviewed" | "resolved";
+  created_at: string;
+  profile: { full_name: string | null; email: string } | null;
 }
 
 interface BetaCode {
@@ -86,6 +97,15 @@ export default function AdminClient() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ user_id: userId, is_admin: isAdmin }),
+    });
+    fetchStats();
+  }
+
+  async function setFeedbackStatus(id: string, status: FeedbackItem["status"]) {
+    await fetch("/api/admin/feedback", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, status }),
     });
     fetchStats();
   }
@@ -180,6 +200,69 @@ export default function AdminClient() {
             Create
           </Button>
         </div>
+      </Card>
+
+      {/* Beta Feedback */}
+      <Card padding="lg" className="mb-8">
+        <h2 className="text-lg font-semibold text-twilight mb-1">
+          Beta Feedback
+          {stats.feedback.filter((f) => f.status === "new").length > 0 && (
+            <span className="ml-2 text-xs font-semibold text-white bg-sunrise-coral px-2 py-0.5 rounded-full align-middle">
+              {stats.feedback.filter((f) => f.status === "new").length} new
+            </span>
+          )}
+        </h2>
+        <p className="text-xs text-charcoal/50 mb-4">
+          What testers are reporting from the in-app feedback button.
+        </p>
+
+        {stats.feedback.length === 0 ? (
+          <p className="text-sm text-charcoal/40 py-6 text-center">
+            No feedback yet. It will appear here as testers use the feedback button.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {stats.feedback.map((f) => {
+              const TypeIcon =
+                f.type === "bug" ? Bug : f.type === "idea" ? Lightbulb : f.type === "praise" ? Heart : MessageCircle;
+              return (
+                <div key={f.id} className={`p-3 rounded-xl border ${f.status === "new" ? "border-deep-sky/20 bg-deep-sky/[0.03]" : "border-charcoal/[0.06] bg-soft-gray/40"}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-2.5 min-w-0">
+                      <TypeIcon className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
+                        f.type === "bug" ? "text-error" : f.type === "idea" ? "text-golden-hour" : f.type === "praise" ? "text-sunrise-coral" : "text-charcoal/50"
+                      }`} />
+                      <div className="min-w-0">
+                        <p className="text-sm text-charcoal whitespace-pre-wrap break-words">{f.message}</p>
+                        <p className="text-[11px] text-charcoal/40 mt-1.5">
+                          {f.profile?.full_name || f.profile?.email || "Unknown user"}
+                          {f.page_url && <> · <code>{f.page_url}</code></>}
+                          {" · "}
+                          {new Date(f.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        </p>
+                      </div>
+                    </div>
+                    <select
+                      value={f.status}
+                      onChange={(e) => setFeedbackStatus(f.id, e.target.value as FeedbackItem["status"])}
+                      className={`text-xs rounded-lg border px-2 py-1 flex-shrink-0 ${
+                        f.status === "new"
+                          ? "border-deep-sky/30 text-deep-sky"
+                          : f.status === "reviewed"
+                            ? "border-golden-hour/40 text-golden-hour"
+                            : "border-success/40 text-success"
+                      }`}
+                    >
+                      <option value="new">New</option>
+                      <option value="reviewed">Reviewed</option>
+                      <option value="resolved">Resolved</option>
+                    </select>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </Card>
 
       {/* Users */}
