@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, DM_Sans, IBM_Plex_Mono } from "next/font/google";
+import { ServiceWorkerRegister } from "@/components/app/ServiceWorkerRegister";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -53,6 +54,15 @@ export const metadata: Metadata = {
     description:
       "Answer daily questions. Build a living archive of your knowledge, stories, and values.",
   },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "Wisdom",
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export const viewport: Viewport = {
@@ -69,7 +79,10 @@ export default function RootLayout({
       lang="en"
       className={`${fraunces.variable} ${dmSans.variable} ${plexMono.variable}`}
     >
-      <body>{children}</body>
+      <body>
+        <ServiceWorkerRegister />
+        {children}
+      </body>
     </html>
   );
 }
