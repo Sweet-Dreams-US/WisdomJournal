@@ -1,10 +1,62 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { Fraunces, DM_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-heading",
+  display: "swap",
+});
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-body",
+  display: "swap",
+});
+
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-mono",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "Wisdom Journal — Preserve Your Legacy",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
+  ),
+  title: {
+    default: "Wisdom Journal — Preserve Your Legacy",
+    template: "%s · Wisdom Journal",
+  },
   description:
-    "Capture your wisdom, preserve your legacy. A daily guided journaling app that makes your knowledge queryable by loved ones via AI.",
+    "Answer one thoughtful question a day. Build a living archive of your stories, values, and hard-won knowledge that your loved ones can ask anything — even when you're not there.",
+  keywords: [
+    "journaling",
+    "legacy",
+    "family stories",
+    "wisdom",
+    "memoir",
+    "knowledge transfer",
+  ],
+  openGraph: {
+    title: "Wisdom Journal — Your Wisdom Lives Forever",
+    description:
+      "Answer daily questions. Build a living archive of your knowledge, stories, and values. Let your loved ones ask your wisdom anything.",
+    url: "/",
+    siteName: "Wisdom Journal",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Wisdom Journal — Your Wisdom Lives Forever",
+    description:
+      "Answer daily questions. Build a living archive of your knowledge, stories, and values.",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0a0e1a",
 };
 
 export default function RootLayout({
@@ -13,7 +65,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html
+      lang="en"
+      className={`${fraunces.variable} ${dmSans.variable} ${plexMono.variable}`}
+    >
       <body>{children}</body>
     </html>
   );
