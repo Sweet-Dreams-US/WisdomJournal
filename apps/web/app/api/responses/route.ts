@@ -96,6 +96,34 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Business questions tag the response with the user's organization
+  let responseContext: "personal" | "organization" = group_id
+    ? "organization"
+    : "personal";
+  let organizationId: string | null = null;
+
+  if (question_id) {
+    const { data: questionRow } = await supabase
+      .from("questions")
+      .select("context_type")
+      .eq("id", question_id)
+      .maybeSingle();
+
+    if (questionRow?.context_type === "business") {
+      responseContext = "organization";
+
+      const { data: membership } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .limit(1)
+        .maybeSingle();
+
+      organizationId = membership?.organization_id ?? null;
+    }
+  }
+
   // Insert response
   const { data: response, error: responseError } = await supabase
     .from("responses")
@@ -103,9 +131,10 @@ export async function POST(request: NextRequest) {
       user_id: user.id,
       question_id: question_id || null,
       group_id: group_id || null,
+      organization_id: organizationId,
       response_text: response_text.trim(),
       input_method: input_method || "text",
-      response_context: group_id ? "organization" : "personal",
+      response_context: responseContext,
       mood: mood || null,
       tags: tags || [],
     })

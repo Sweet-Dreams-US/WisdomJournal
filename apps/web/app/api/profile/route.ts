@@ -22,6 +22,7 @@ export async function PATCH(request: NextRequest) {
     "ai_personality_enabled",
     "voice_response_enabled",
     "voice_capture_enabled",
+    "work_questions_enabled",
     "notification_preferences",
   ];
 

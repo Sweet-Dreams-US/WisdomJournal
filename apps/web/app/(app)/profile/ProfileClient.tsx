@@ -54,6 +54,10 @@ export default function ProfileClient({
 
   const [notifPrefs, setNotifPrefs] = useState(initialNotifPrefs ?? defaultPrefs);
   const [questionDepth, setQuestionDepth] = useState<string>("medium");
+  const [workQuestionsEnabled, setWorkQuestionsEnabled] = useState<boolean>(
+    (profile as UserProfile & { work_questions_enabled?: boolean })
+      .work_questions_enabled ?? true
+  );
 
   const initials = profile.full_name
     ? profile.full_name
@@ -80,6 +84,17 @@ export default function ProfileClient({
         body: JSON.stringify({ [key]: newVal }),
       });
     }
+  }
+
+  async function toggleWorkQuestions() {
+    const newVal = !workQuestionsEnabled;
+    setWorkQuestionsEnabled(newVal);
+
+    await fetch("/api/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ work_questions_enabled: newVal }),
+    });
   }
 
   async function updateReminderTime(time: string) {
@@ -249,7 +264,7 @@ export default function ProfileClient({
         <p className="text-sm text-charcoal/60 mb-3">
           Choose the depth of your daily questions.
         </p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
           {["easy", "medium", "deep", "challenging"].map((level) => (
             <button
               key={level}
@@ -265,6 +280,37 @@ export default function ProfileClient({
               {level}
             </button>
           ))}
+        </div>
+
+        <div className="pt-4 border-t border-soft-gray">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={workQuestionsEnabled}
+            onClick={toggleWorkQuestions}
+            className="flex items-center justify-between w-full text-left cursor-pointer group"
+          >
+            <div className="pr-4">
+              <p className="text-sm font-medium text-charcoal">Work questions</p>
+              <p className="text-xs text-charcoal/50">
+                Include your organization&apos;s business questions in your daily set
+              </p>
+              <p className="text-xs text-charcoal/40 mt-0.5">
+                Applies when you belong to an organization
+              </p>
+            </div>
+            <div
+              className={`relative flex-shrink-0 w-10 h-6 rounded-full transition-colors ${
+                workQuestionsEnabled ? "bg-deep-sky" : "bg-soft-gray"
+              }`}
+            >
+              <div
+                className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
+                  workQuestionsEnabled ? "left-[18px]" : "left-0.5"
+                }`}
+              />
+            </div>
+          </button>
         </div>
       </Card>
 

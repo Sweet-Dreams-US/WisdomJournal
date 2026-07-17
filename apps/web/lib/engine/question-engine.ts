@@ -21,41 +21,60 @@ export async function generateDailyQuestions(
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("total_responses")
+      .select("total_responses, work_questions_enabled")
       .eq("id", userId)
       .maybeSingle();
 
     const totalResponses = profile?.total_responses ?? 0;
+    const workQuestionsEnabled = profile?.work_questions_enabled ?? true;
+
+    // Check for an active organization membership (business questions)
+    const { data: orgMembership } = await supabase
+      .from("organization_members")
+      .select("organization_id")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .limit(1)
+      .maybeSingle();
+
+    const isActiveOrgMember = !!orgMembership;
 
     const { data: categories } = await supabase
       .from("categories")
       .select("id")
-      .neq("slug", "daily_reflection");
+      .neq("slug", "daily_reflection")
+      .eq("context_type", "personal");
 
     const totalCategories = categories?.length ?? 10;
 
     // Get candidate pool: sample from each category to ensure diversity
     // Fetch a random spread across all categories instead of first 500 rows
-    const allCandidates: any[] = [];
+    const fetchCandidatesForCategories = async (
+      catIds: string[]
+    ): Promise<any[]> => {
+      const pool: any[] = [];
+      for (const catId of catIds) {
+        const { data: catQuestions } = await supabase
+          .from("questions")
+          .select(
+            `
+            id, text, category_id, subcategory_id, difficulty, emotional_weight,
+            avg_rating, skip_rate, is_daily_reflection,
+            category:categories(slug)
+            `
+          )
+          .eq("is_active", true)
+          .eq("is_daily_reflection", false)
+          .eq("category_id", catId)
+          .limit(50);
+
+        if (catQuestions) pool.push(...catQuestions);
+      }
+      return pool;
+    };
+
     const categoryIds = categories?.map((c: any) => c.id) ?? [];
-
-    for (const catId of categoryIds) {
-      const { data: catQuestions } = await supabase
-        .from("questions")
-        .select(
-          `
-          id, text, category_id, subcategory_id, difficulty, emotional_weight,
-          avg_rating, skip_rate, is_daily_reflection,
-          category:categories(slug)
-          `
-        )
-        .eq("is_active", true)
-        .eq("is_daily_reflection", false)
-        .eq("category_id", catId)
-        .limit(50);
-
-      if (catQuestions) allCandidates.push(...catQuestions);
-    }
+    const allCandidates = await fetchCandidatesForCategories(categoryIds);
 
     const candidates = allCandidates;
     const candidateError = null;
@@ -89,54 +108,89 @@ export async function generateDailyQuestions(
     const fourteenDaysAgo = new Date();
     fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
 
-    const filteredCandidates = candidates
-      .filter((q: any) => {
-        const history = historyMap.get(q.id);
-        if (!history) return true;
-        if (history.answered) {
-          return new Date(history.shown_at) < thirtyDaysAgo;
-        }
-        if (history.skipped) {
-          return new Date(history.shown_at) < fourteenDaysAgo;
-        }
-        return true;
-      })
-      .map((q: any) => {
-        const history = historyMap.get(q.id);
-        return {
-          id: q.id,
-          text: q.text,
-          category_id: q.category_id,
-          category_slug: q.category?.slug ?? "",
-          subcategory_id: q.subcategory_id,
-          difficulty: q.difficulty,
-          emotional_weight: q.emotional_weight,
-          avg_rating: q.avg_rating,
-          skip_rate: q.skip_rate ?? 0,
-          is_daily_reflection: q.is_daily_reflection,
-          last_shown_at: history?.shown_at ?? null,
-          was_answered: history?.answered ?? false,
-          was_skipped: history?.skipped ?? false,
-        };
-      });
+    const filterAndMapCandidates = (pool: any[]) =>
+      pool
+        .filter((q: any) => {
+          const history = historyMap.get(q.id);
+          if (!history) return true;
+          if (history.answered) {
+            return new Date(history.shown_at) < thirtyDaysAgo;
+          }
+          if (history.skipped) {
+            return new Date(history.shown_at) < fourteenDaysAgo;
+          }
+          return true;
+        })
+        .map((q: any) => {
+          const history = historyMap.get(q.id);
+          return {
+            id: q.id,
+            text: q.text,
+            category_id: q.category_id,
+            category_slug: q.category?.slug ?? "",
+            subcategory_id: q.subcategory_id,
+            difficulty: q.difficulty,
+            emotional_weight: q.emotional_weight,
+            avg_rating: q.avg_rating,
+            skip_rate: q.skip_rate ?? 0,
+            is_daily_reflection: q.is_daily_reflection,
+            last_shown_at: history?.shown_at ?? null,
+            was_answered: history?.answered ?? false,
+            was_skipped: history?.skipped ?? false,
+          };
+        });
+
+    const filteredCandidates = filterAndMapCandidates(candidates);
 
     if (filteredCandidates.length === 0) {
       console.error("All questions filtered out by history");
       return null;
     }
 
-    // Score and select 4 category questions
-    const ranked = rankQuestions(
-      filteredCandidates,
-      {
-        userCategoryStats: categoryStats ?? [],
-        totalResponses,
-        totalCategories,
-      },
-      "medium"
-    );
+    const scoringContext = {
+      userCategoryStats: categoryStats ?? [],
+      totalResponses,
+      totalCategories,
+    };
 
-    const selectedCategory = selectDiverseQuestions(ranked, 4);
+    // Score and select 4 category questions
+    const ranked = rankQuestions(filteredCandidates, scoringContext, "medium");
+
+    let selectedCategory = selectDiverseQuestions(ranked, 4);
+    let selectedBusiness: typeof selectedCategory = [];
+
+    // Org members with work questions enabled get 2 personal + 2 business
+    if (isActiveOrgMember && workQuestionsEnabled) {
+      const { data: businessCategories } = await supabase
+        .from("categories")
+        .select("id")
+        .eq("context_type", "business");
+
+      const businessCategoryIds =
+        businessCategories?.map((c: any) => c.id) ?? [];
+
+      if (businessCategoryIds.length > 0) {
+        const businessCandidates = await fetchCandidatesForCategories(
+          businessCategoryIds
+        );
+        const filteredBusiness = filterAndMapCandidates(businessCandidates);
+
+        if (filteredBusiness.length > 0) {
+          const rankedBusiness = rankQuestions(
+            filteredBusiness,
+            scoringContext,
+            "medium"
+          );
+          selectedBusiness = selectDiverseQuestions(rankedBusiness, 2);
+
+          if (selectedBusiness.length > 0) {
+            // Reduce personal questions to 2 to make room for business
+            selectedCategory = selectDiverseQuestions(ranked, 2);
+          }
+        }
+      }
+      // If no business questions exist yet, fall back to 4 personal silently
+    }
 
     // Select 1 daily reflection (random from pool)
     const { data: reflections } = await supabase
@@ -152,17 +206,21 @@ export async function generateDailyQuestions(
         reflections[Math.floor(Math.random() * reflections.length)];
     }
 
-    if (selectedCategory.length === 0 && !selectedReflection) {
+    if (
+      selectedCategory.length === 0 &&
+      selectedBusiness.length === 0 &&
+      !selectedReflection
+    ) {
       return null;
     }
 
-    // Build the items list
-    const allQuestions = [
-      ...selectedCategory.map((q, i) => ({
+    // Build the items list: personal first, then business, then reflection
+    const allQuestions = [...selectedCategory, ...selectedBusiness].map(
+      (q, i) => ({
         question_id: q.id,
         sort_order: i + 1,
-      })),
-    ];
+      })
+    );
 
     if (selectedReflection) {
       allQuestions.push({
