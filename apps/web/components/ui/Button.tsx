@@ -1,6 +1,12 @@
 import { forwardRef, type ButtonHTMLAttributes } from "react";
 
-type ButtonVariant = "primary" | "secondary" | "ghost" | "outline";
+type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "ghost"
+  | "outline"
+  | "ghost-light"
+  | "outline-light";
 type ButtonSize = "sm" | "md" | "lg";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -11,13 +17,19 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    "bg-gradient-to-r from-deep-sky to-sky-blue text-white hover:from-sky-blue hover:to-deep-sky shadow-glow hover:shadow-glow-lg",
+    "bg-gradient-to-r from-deep-sky to-sky-blue text-white hover:from-sky-blue hover:to-deep-sky shadow-button hover:shadow-glow",
   secondary:
     "bg-gradient-to-r from-golden-hour to-[#e8951c] text-night-sky hover:from-[#e8951c] hover:to-golden-hour glow-gold",
+  // Dark backgrounds
   ghost:
     "bg-transparent text-white/60 hover:text-white hover:bg-white/5",
   outline:
     "bg-transparent border border-white/20 text-white/80 hover:border-sky-blue/50 hover:text-sky-blue hover:bg-sky-blue/5",
+  // Light backgrounds
+  "ghost-light":
+    "bg-transparent text-charcoal/60 hover:text-charcoal hover:bg-soft-gray",
+  "outline-light":
+    "bg-transparent border border-charcoal/15 text-charcoal/70 hover:border-deep-sky/40 hover:text-deep-sky hover:bg-deep-sky/5",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
@@ -27,7 +39,17 @@ const sizeClasses: Record<ButtonSize, string> = {
 };
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ variant = "primary", size = "md", fullWidth, className = "", children, ...props }, ref) => {
+  (
+    {
+      variant = "primary",
+      size = "md",
+      fullWidth,
+      className = "",
+      children,
+      ...props
+    },
+    ref
+  ) => {
     return (
       <button
         ref={ref}

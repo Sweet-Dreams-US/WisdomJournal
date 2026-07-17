@@ -26,12 +26,12 @@ export async function POST(request: NextRequest) {
   );
 
   // Fetch all user's responses with questions and categories
-  const { data: responses } = await admin
+  const { data: responses, error: fetchError } = await admin
     .from("responses")
     .select(
       `
       id, response_text, word_count, input_method, is_favorite, created_at,
-      question:questions(question_text),
+      question:questions(text),
       categories:response_categories(category:categories(name, slug))
     `
     )
@@ -39,11 +39,19 @@ export async function POST(request: NextRequest) {
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
+  if (fetchError) {
+    console.error("Export fetch error:", fetchError);
+    return NextResponse.json(
+      { error: "Failed to fetch responses" },
+      { status: 500 }
+    );
+  }
+
   // Format the data
   const exportData = (responses ?? []).map((r: any) => ({
     date: r.created_at,
-    question: r.question?.question_text ?? "",
-    response: r.response_text,
+    question: r.question?.text ?? "",
+    response: r.response_text ?? "",
     word_count: r.word_count,
     categories: (r.categories ?? [])
       .map((c: any) => c.category?.name)

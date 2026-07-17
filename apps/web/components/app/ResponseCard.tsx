@@ -31,10 +31,10 @@ export default function ResponseCard({ response, showDate = true }: ResponseCard
             {primaryCategory && (
               <CategoryBadge slug={primaryCategory.slug} name={primaryCategory.name} size="sm" />
             )}
-            <p className="text-charcoal mt-2 line-clamp-3 leading-relaxed">
+            <p className="text-charcoal mt-2 line-clamp-3 leading-relaxed tracking-tight">
               {response.response_text}
             </p>
-            <div className="flex items-center gap-4 mt-3 text-xs text-charcoal/50">
+            <div className="flex items-center gap-4 mt-3 text-[11px] text-charcoal/40 font-medium">
               {showDate && (
                 <span className="flex items-center gap-1">
                   <Clock className="w-3 h-3" />
@@ -46,7 +46,7 @@ export default function ResponseCard({ response, showDate = true }: ResponseCard
           </div>
 
           {response.is_favorite && (
-            <Heart className="w-4 h-4 text-sunrise-coral fill-sunrise-coral flex-shrink-0 mt-1" />
+            <Heart className="w-4 h-4 text-sunrise-coral fill-sunrise-coral flex-shrink-0 mt-1 transition-transform duration-300 group-hover:scale-110" />
           )}
         </div>
       </Card>

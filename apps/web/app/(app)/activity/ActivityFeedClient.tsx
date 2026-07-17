@@ -97,50 +97,63 @@ export default function ActivityFeedClient({ initialEvents }: Props) {
 
   return (
     <div className="max-w-3xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-heading font-bold text-twilight">
+      <div className="mb-6 animate-fade-in">
+        <h1 className="text-2xl font-bold text-twilight tracking-tight">
           Activity
         </h1>
-        <p className="text-sm text-charcoal/60 mt-1">
+        <p className="text-sm text-charcoal/50 mt-1 font-medium">
           Recent activity from you and your friends
         </p>
       </div>
 
       {events.length === 0 ? (
-        <Card padding="lg">
+        <Card padding="lg" className="animate-scale-in">
           <div className="text-center py-8">
-            <Activity className="w-12 h-12 text-charcoal/20 mx-auto mb-3" />
-            <p className="text-charcoal/60 font-medium">No activity yet</p>
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-deep-sky/8 to-deep-sky/3 flex items-center justify-center mx-auto mb-4">
+              <Activity className="w-8 h-8 text-charcoal/20" />
+            </div>
+            <p className="text-charcoal/60 font-semibold tracking-tight">No activity yet</p>
             <p className="text-sm text-charcoal/40 mt-1">
               Start journaling or connect with friends to see activity here
             </p>
           </div>
         </Card>
       ) : (
-        <div className="space-y-2">
-          {events.map((event) => (
-            <Card key={event.id} padding="sm">
-              <div className="flex items-center gap-3 py-1">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-soft-gray flex items-center justify-center">
-                  {getEventIcon(event.event_type)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-charcoal">
-                    {getEventDescription(event)}
-                  </p>
-                  <p className="text-xs text-charcoal/40 mt-0.5">
-                    {timeAgo(event.created_at)}
-                  </p>
-                </div>
+        <div className="relative">
+          {/* Timeline line */}
+          <div className="absolute left-[19px] top-3 bottom-3 w-px bg-gradient-to-b from-deep-sky/15 via-golden-hour/10 to-transparent" />
+
+          <div className="space-y-1.5">
+            {events.map((event, i) => (
+              <div
+                key={event.id}
+                className="animate-slide-in-left"
+                style={{ animationDelay: `${Math.min(i * 0.04, 0.4)}s` }}
+              >
+                <Card padding="sm" className="hover:shadow-card-glow transition-all duration-300 ml-2">
+                  <div className="flex items-center gap-3 py-0.5">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-gradient-to-br from-soft-gray to-white flex items-center justify-center border border-charcoal/[0.04] relative z-10">
+                      {getEventIcon(event.event_type)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-charcoal tracking-tight">
+                        {getEventDescription(event)}
+                      </p>
+                      <p className="text-[11px] text-charcoal/35 mt-0.5 font-medium">
+                        {timeAgo(event.created_at)}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
               </div>
-            </Card>
-          ))}
+            ))}
+          </div>
 
           {events.length >= 30 && (
             <button
               onClick={loadMore}
               disabled={loading}
-              className="w-full py-2 text-sm text-deep-sky hover:text-deep-sky/80 transition-colors"
+              className="w-full py-3 text-sm font-semibold text-deep-sky hover:text-deep-sky/80 transition-all duration-200 mt-2"
             >
               {loading ? "Loading..." : "Load more"}
             </button>

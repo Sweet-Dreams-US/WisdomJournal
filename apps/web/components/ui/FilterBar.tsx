@@ -22,11 +22,11 @@ export default function FilterBar({ items, selected, onSelect }: FilterBarProps)
       <button
         onClick={() => onSelect(null)}
         className={`
-          px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap
-          transition-colors duration-150 flex-shrink-0
+          px-3 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap
+          transition-all duration-200 flex-shrink-0
           ${!selected
-            ? "bg-deep-sky text-white"
-            : "bg-soft-gray text-charcoal/70 hover:bg-charcoal/10"
+            ? "bg-gradient-to-r from-deep-sky to-sky-blue text-white shadow-sm"
+            : "bg-charcoal/[0.04] text-charcoal/60 hover:bg-charcoal/[0.08] hover:text-charcoal/80"
           }
         `}
       >
@@ -42,11 +42,11 @@ export default function FilterBar({ items, selected, onSelect }: FilterBarProps)
             key={item.slug}
             onClick={() => onSelect(isActive ? null : item.slug)}
             className={`
-              inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium
-              whitespace-nowrap transition-colors duration-150 flex-shrink-0
+              inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold
+              whitespace-nowrap transition-all duration-200 flex-shrink-0
               ${isActive
-                ? `${style.bgColor} ${style.color}`
-                : "bg-soft-gray text-charcoal/70 hover:bg-charcoal/10"
+                ? `${style.bgColor} ${style.color} shadow-sm`
+                : "bg-charcoal/[0.04] text-charcoal/60 hover:bg-charcoal/[0.08] hover:text-charcoal/80"
               }
             `}
           >
