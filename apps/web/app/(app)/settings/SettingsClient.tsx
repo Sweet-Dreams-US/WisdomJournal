@@ -12,6 +12,7 @@ import {
   EyeOff,
   FileJson,
   FileSpreadsheet,
+  FileText,
   AlertTriangle,
   CheckCircle,
   Loader2,
@@ -27,16 +28,31 @@ import {
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import {
+  parseMarkdownEntries,
+  isMarkdownFileName,
+  type ImportEntry,
+} from "@/lib/import/markdown";
+import { useCategories } from "@/lib/hooks/use-categories";
+import { plural } from "@/lib/utils/plural";
 
 interface SettingsClientProps {
   profile: any;
 }
 
-interface ImportEntry {
-  question?: string;
-  response: string;
-  date?: string;
-  category?: string;
+interface MarkdownImportStats {
+  notes: number;
+  withDates: number;
+  withCategories: number;
+}
+
+function readFileAsText(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(file);
+  });
 }
 
 export default function SettingsClient({ profile }: SettingsClientProps) {
@@ -53,8 +69,10 @@ export default function SettingsClient({ profile }: SettingsClientProps) {
   const [exportSuccess, setExportSuccess] = useState<string | null>(null);
 
   // Import
+  const { categories } = useCategories();
   const [importEntries, setImportEntries] = useState<ImportEntry[]>([]);
   const [importFileName, setImportFileName] = useState<string | null>(null);
+  const [mdStats, setMdStats] = useState<MarkdownImportStats | null>(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{
     imported: number;
@@ -148,11 +166,77 @@ export default function SettingsClient({ profile }: SettingsClientProps) {
   // Import file handling
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
+      const files = Array.from(e.target.files ?? []);
+
+      // Reset input so the same file(s) can be selected again
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      if (files.length === 0) return;
 
       setImportError(null);
       setImportResult(null);
+      setMdStats(null);
+
+      const mdFiles = files.filter((f) => isMarkdownFileName(f.name));
+      const otherFiles = files.filter((f) => !isMarkdownFileName(f.name));
+
+      if (mdFiles.length > 0 && otherFiles.length > 0) {
+        setImportError(
+          "Please import Markdown notes separately from JSON/CSV files."
+        );
+        return;
+      }
+
+      // Markdown / Obsidian notes: parse each file into one entry
+      if (mdFiles.length > 0) {
+        Promise.all(mdFiles.map(readFileAsText))
+          .then((contents) => {
+            const parsed = parseMarkdownEntries(
+              mdFiles.map((f, i) => ({ name: f.name, content: contents[i] })),
+              categories.map((c) => ({ slug: c.slug, name: c.name }))
+            );
+
+            if (parsed.length === 0) {
+              setImportError(
+                "No journal content found in the selected Markdown files."
+              );
+              return;
+            }
+
+            if (parsed.length > 500) {
+              setImportError(
+                `Found ${parsed.length} notes, but the maximum is 500 entries per import. Please select fewer notes at a time.`
+              );
+              return;
+            }
+
+            setImportEntries(parsed);
+            setImportFileName(
+              mdFiles.length === 1
+                ? mdFiles[0].name
+                : `${plural(mdFiles.length, "Markdown file")}`
+            );
+            setMdStats({
+              notes: parsed.length,
+              withDates: parsed.filter((p) => p.date).length,
+              withCategories: parsed.filter((p) => p.category).length,
+            });
+          })
+          .catch(() => {
+            setImportError("Failed to read Markdown files. Please try again.");
+          });
+        return;
+      }
+
+      if (otherFiles.length > 1) {
+        setImportError(
+          "Select a single JSON or CSV file, or multiple Markdown notes."
+        );
+        return;
+      }
+
+      const file = otherFiles[0];
       setImportFileName(file.name);
 
       const reader = new FileReader();
@@ -208,20 +292,17 @@ export default function SettingsClient({ profile }: SettingsClientProps) {
             }
             setImportEntries(entries);
           } else {
-            setImportError("Unsupported file type. Please use .json or .csv files.");
+            setImportError(
+              "Unsupported file type. Please use .json, .csv, or .md files."
+            );
           }
         } catch {
           setImportError("Failed to parse file. Please check the format.");
         }
       };
       reader.readAsText(file);
-
-      // Reset input so same file can be selected again
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
     },
-    []
+    [categories]
   );
 
   // Simple CSV line parser handling quoted fields
@@ -258,7 +339,11 @@ export default function SettingsClient({ profile }: SettingsClientProps) {
     setImportResult(null);
 
     try {
-      const source = importFileName?.endsWith(".csv") ? "csv" : "json";
+      const source = mdStats
+        ? "markdown"
+        : importFileName?.endsWith(".csv")
+          ? "csv"
+          : "json";
       const res = await fetch("/api/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -279,6 +364,7 @@ export default function SettingsClient({ profile }: SettingsClientProps) {
       });
       setImportEntries([]);
       setImportFileName(null);
+      setMdStats(null);
     } catch {
       setImportError("Import failed. Please try again.");
     } finally {
@@ -289,6 +375,7 @@ export default function SettingsClient({ profile }: SettingsClientProps) {
   function clearImport() {
     setImportEntries([]);
     setImportFileName(null);
+    setMdStats(null);
     setImportError(null);
     setImportResult(null);
   }
@@ -574,12 +661,19 @@ export default function SettingsClient({ profile }: SettingsClientProps) {
       {/* Import Wisdom */}
       <h3 className="text-lg font-bold text-twilight mb-3">Import Wisdom</h3>
       <Card padding="md" className="mb-8">
-        <p className="text-sm text-charcoal/60 mb-4">
-          Import journal entries from a JSON or CSV file. Each entry should have
-          at least a <code className="text-xs bg-soft-gray px-1 py-0.5 rounded">response</code> field.
+        <p className="text-sm text-charcoal/60 mb-2">
+          Import journal entries from JSON, CSV, or Markdown files. JSON/CSV
+          entries should have at least a{" "}
+          <code className="text-xs bg-soft-gray px-1 py-0.5 rounded">response</code> field.
           Optional fields: <code className="text-xs bg-soft-gray px-1 py-0.5 rounded">question</code>,{" "}
           <code className="text-xs bg-soft-gray px-1 py-0.5 rounded">date</code>,{" "}
           <code className="text-xs bg-soft-gray px-1 py-0.5 rounded">category</code> (slug).
+        </p>
+        <p className="text-sm text-charcoal/60 mb-4">
+          Works great with Obsidian vaults &mdash; select your daily notes or
+          export folder. Each note becomes an entry: the title is kept as the
+          question, dates come from frontmatter or the filename, and tags that
+          match a category are applied automatically.
         </p>
 
         {importError && (
@@ -608,23 +702,27 @@ export default function SettingsClient({ profile }: SettingsClientProps) {
           >
             <Upload className="w-8 h-8 text-charcoal/30 mx-auto mb-3" />
             <p className="text-sm font-medium text-charcoal/60 mb-1">
-              Click to select a file
+              Click to select files
             </p>
             <p className="text-xs text-charcoal/40">
-              Accepts .json and .csv files
+              Accepts .json, .csv, and .md files &mdash; select multiple
+              Markdown notes at once
             </p>
           </div>
         ) : (
           <div>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <FileJson className="w-4 h-4 text-deep-sky" />
+                {mdStats ? (
+                  <FileText className="w-4 h-4 text-deep-sky" />
+                ) : (
+                  <FileJson className="w-4 h-4 text-deep-sky" />
+                )}
                 <span className="text-sm font-medium text-charcoal">
                   {importFileName}
                 </span>
                 <span className="text-xs text-charcoal/50">
-                  ({importEntries.length}{" "}
-                  {importEntries.length === 1 ? "entry" : "entries"})
+                  ({plural(importEntries.length, "entry", "entries")})
                 </span>
               </div>
               <button
@@ -634,6 +732,16 @@ export default function SettingsClient({ profile }: SettingsClientProps) {
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {/* Markdown parse summary */}
+            {mdStats && (
+              <div className="flex items-center gap-2 mb-3 p-2.5 rounded-lg bg-deep-sky/5 text-deep-sky text-xs font-medium">
+                <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                {plural(mdStats.notes, "note")} parsed &middot;{" "}
+                {mdStats.withDates} with dates &middot; {mdStats.withCategories}{" "}
+                matched to categories
+              </div>
+            )}
 
             {/* Preview */}
             <div className="border border-soft-gray rounded-xl overflow-hidden mb-4 max-h-48 overflow-y-auto">
@@ -698,7 +806,8 @@ export default function SettingsClient({ profile }: SettingsClientProps) {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".json,.csv"
+          accept=".json,.csv,.md,.markdown"
+          multiple
           onChange={handleFileSelect}
           className="hidden"
         />

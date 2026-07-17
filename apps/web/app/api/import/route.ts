@@ -10,6 +10,22 @@ interface ImportEntry {
   category?: string; // slug
 }
 
+/**
+ * Convert an entry's date string to an ISO timestamp. Date-only strings
+ * (YYYY-MM-DD — the common case for Obsidian daily notes and CSV exports)
+ * parse as UTC *midnight*, which files the entry under the previous day in
+ * western timezones — anchor them to noon instead. Throws on invalid dates
+ * (same as the previous `new Date(...).toISOString()` behavior) so the
+ * entry is recorded in the error log.
+ */
+function parseImportDate(dateStr: string): string {
+  const trimmed = dateStr.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return new Date(`${trimmed}T12:00:00`).toISOString();
+  }
+  return new Date(trimmed).toISOString();
+}
+
 export async function POST(request: NextRequest) {
   const supabase = createClient();
   const {
@@ -50,12 +66,21 @@ export async function POST(request: NextRequest) {
     (categories ?? []).map((c: any) => [c.slug, c.id])
   );
 
-  // Create import record
+  // Create import record. The wisdom_imports.source CHECK constraint only
+  // allows manual|csv|json, so markdown (Obsidian) imports are recorded
+  // under "manual".
+  const dbSource =
+    source === "markdown"
+      ? "manual"
+      : ["manual", "csv", "json"].includes(source)
+        ? source
+        : "json";
+
   const { data: importRecord } = await admin
     .from("wisdom_imports")
     .insert({
       user_id: user.id,
-      source: ["manual", "csv", "json"].includes(source) ? source : "json",
+      source: dbSource,
       status: "processing",
       total_entries: entries.length,
     })
@@ -82,17 +107,18 @@ export async function POST(request: NextRequest) {
       const responseText = entry.response.trim();
       const wordCount = responseText.split(/\s+/).filter(Boolean).length;
 
-      // Insert response
+      // Insert response. The input_method enum only allows text|voice|mixed
+      // (verified against the live DB) — imported entries are text.
       const { data: response, error: responseError } = await admin
         .from("responses")
         .insert({
           user_id: user.id,
           response_text: responseText,
           word_count: wordCount,
-          input_method: "import",
+          input_method: "text",
           response_context: "personal",
           created_at: entry.date
-            ? new Date(entry.date).toISOString()
+            ? parseImportDate(entry.date)
             : new Date().toISOString(),
         })
         .select()
@@ -102,12 +128,14 @@ export async function POST(request: NextRequest) {
         throw new Error(responseError.message);
       }
 
-      // Auto-assign category if provided
+      // Auto-assign category if provided. The category_tag_source enum only
+      // allows primary|ai_suggested|user_override — the user supplied this
+      // mapping (CSV column, JSON field, or Obsidian tag), so user_override.
       if (entry.category && categoryMap.has(entry.category)) {
         await admin.from("response_categories").insert({
           response_id: response.id,
           category_id: categoryMap.get(entry.category),
-          source: "import",
+          source: "user_override",
         });
       } else if (categories && categories.length > 0) {
         // Default to first category if no match
