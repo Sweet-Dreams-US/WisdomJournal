@@ -7,6 +7,8 @@ import { useSidebar } from "./SidebarProvider";
 const pageTitles: Record<string, { title: string; subtitle?: string }> = {
   "/dashboard": { title: "Today", subtitle: "Your daily reflection" },
   "/journal": { title: "Journal", subtitle: "Your wisdom archive" },
+  "/calendar": { title: "Calendar", subtitle: "Your journaling months at a glance" },
+  "/achievements": { title: "Achievements", subtitle: "Milestones you have earned" },
   "/ask": { title: "Ask Wisdom", subtitle: "Query your knowledge" },
   "/profile": { title: "Profile", subtitle: "Your identity" },
   "/groups": { title: "Groups", subtitle: "Shared wisdom circles" },

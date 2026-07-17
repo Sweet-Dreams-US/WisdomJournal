@@ -18,6 +18,8 @@ import {
   Bell,
   Activity,
   Users2,
+  CalendarDays,
+  Award,
   type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -35,6 +37,7 @@ const navSections: {
     items: [
       { label: "Today", href: "/dashboard", icon: Sun },
       { label: "Journal", href: "/journal", icon: BookOpen },
+      { label: "Calendar", href: "/calendar", icon: CalendarDays },
       { label: "Encyclopedia", href: "/encyclopedia", icon: Globe },
       { label: "Ask", href: "/ask", icon: MessageCircle },
     ],
@@ -51,6 +54,7 @@ const navSections: {
   {
     heading: "You",
     items: [
+      { label: "Achievements", href: "/achievements", icon: Award },
       { label: "Favorites", href: "/favorites", icon: Heart },
       { label: "Notifications", href: "/notifications", icon: Bell },
       { label: "Profile", href: "/profile", icon: User },
