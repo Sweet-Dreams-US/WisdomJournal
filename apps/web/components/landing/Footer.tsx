@@ -82,6 +82,9 @@ export default function Footer() {
             </div>
 
             <div className="flex items-center gap-6">
+              <Link href="/business" className="font-body text-xs text-white/30 hover:text-white/60 transition-colors">
+                For Business
+              </Link>
               <Link href="/privacy" className="font-body text-xs text-white/30 hover:text-white/60 transition-colors">
                 Privacy
               </Link>

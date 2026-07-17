@@ -72,6 +72,9 @@ export default function Navbar() {
             <a href="#pricing" className="font-body text-sm text-white/50 hover:text-sky-blue transition-colors duration-300">
               Pricing
             </a>
+            <Link href="/business" className="font-body text-sm text-white/50 hover:text-golden-hour transition-colors duration-300">
+              For Business
+            </Link>
           </div>
 
           <div className="hidden md:flex items-center gap-3">
@@ -133,6 +136,13 @@ export default function Navbar() {
           >
             Pricing
           </a>
+          <Link
+            href="/business"
+            onClick={closeMobile}
+            className="block font-body text-sm text-white/50 hover:text-golden-hour transition-colors duration-300"
+          >
+            For Business
+          </Link>
 
           <div className="pt-2 border-t border-white/10 space-y-3">
             {isLoggedIn ? (
