@@ -34,6 +34,26 @@ are applied to the live Supabase project.
   before inviting a bigger wave, or signup confirmations will silently
   throttle.
 
+## 2.5 Business tier (live as of July 16, evening)
+
+- **Marketing**: https://wisdom-journal.vercel.app/business (linked from
+  navbar + footer). Pricing shown: $19.99/seat Business, custom
+  Enterprise — labeled *free during beta*.
+- **In-app**: Organizations (sidebar → Connect). Any user can create an
+  org (10 seats default), add departments, invite by email (owner/admin/
+  member roles + job titles), and manage members. Invitees get an email
+  with a join link (or share the /org/join/TOKEN link directly).
+- **Daily mixing**: active org members automatically get 2 business
+  questions (from a 120-question bank across 6 business categories) + 2
+  personal + 1 reflection. Toggle in Profile → "Work questions".
+- **Privacy model** (marketed as a feature): business answers are tagged
+  to the org, but admins see participation/coverage METRICS only — no
+  one can read anyone else's entries. Knowledge-transfer access (e.g.
+  successor grants when someone departs) is the next business feature.
+- **Mixing/matching**: personal + business coexist per user; personal
+  entries never touch the org; business categories stay out of personal
+  pickers.
+
 ## 3. Inviting test users
 
 - Beta gate is live: registration requires an invite code.
