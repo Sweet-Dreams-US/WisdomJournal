@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Flame, BookOpen, Sun, PartyPopper, Sparkles, Loader2 } from "lucide-react";
+import { Flame, BookOpen, Sun, PartyPopper, Sparkles, Loader2, History } from "lucide-react";
 import StatsCard from "@/components/ui/StatsCard";
 import ProgressDots from "@/components/ui/ProgressDots";
 import QuestionCard from "@/components/app/QuestionCard";
+import MemoryCard from "@/components/app/MemoryCard";
 import Card from "@/components/ui/Card";
 import type { UserProfile, DailyQuestionSet } from "@wisdom-journal/shared";
+import type { Memory } from "@/lib/data/get-memories";
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -18,11 +20,13 @@ function getGreeting(): string {
 interface DashboardClientProps {
   profile: UserProfile;
   dailySet: DailyQuestionSet | null;
+  memories: Memory[];
 }
 
 export default function DashboardClient({
   profile,
   dailySet,
+  memories,
 }: DashboardClientProps) {
   const firstName = profile.full_name?.split(" ")[0] ?? "there";
   const greeting = getGreeting();
@@ -233,6 +237,29 @@ export default function DashboardClient({
             </div>
           )}
         </>
+      )}
+
+      {/* On this day — memories */}
+      {memories.length > 0 && (
+        <div className="mt-10 animate-fade-in-up">
+          <div className="flex items-center gap-2 mb-3">
+            <History className="w-4 h-4 text-golden-hour" />
+            <h3 className="text-[11px] font-bold text-golden-hour uppercase tracking-[0.15em]">
+              On this day
+            </h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {memories.map((memory, i) => (
+              <div
+                key={memory.response_id}
+                className="animate-stagger-in h-full"
+                style={{ animationDelay: `${i * 0.06}s` }}
+              >
+                <MemoryCard memory={memory} />
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
