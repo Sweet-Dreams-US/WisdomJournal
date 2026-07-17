@@ -152,6 +152,27 @@ export function groupInviteEmail(
   };
 }
 
+export function orgInviteEmail(
+  orgName: string,
+  inviterName: string,
+  joinUrl: string,
+  role: "admin" | "member"
+): { subject: string; html: string } {
+  const roleLabel = role === "admin" ? "an admin" : "a member";
+  return {
+    subject: `${inviterName} invited you to join ${orgName} on Wisdom Journal`,
+    html: wrap(`
+      <p style="font-size:16px;">Hi,</p>
+      <p><strong>${inviterName}</strong> invited you to join <strong>${orgName}</strong> on Wisdom Journal as ${roleLabel}.</p>
+      <p>Wisdom Journal helps your team capture the know-how, decisions, and hard-won lessons that usually walk out the door.</p>
+      <div style="text-align:center; margin:28px 0;">
+        <a href="${joinUrl}" style="${buttonStyle}">Accept Invitation</a>
+      </div>
+      <p style="font-size:12px; color:#2D2D2D80; text-align:center;">This invitation expires in 14 days. If you weren't expecting it, you can safely ignore this email.</p>
+    `),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Weekly Digest Email
 // ---------------------------------------------------------------------------
