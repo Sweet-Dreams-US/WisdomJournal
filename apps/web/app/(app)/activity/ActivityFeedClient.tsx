@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   BookOpen,
   Flame,
@@ -8,9 +8,20 @@ import {
   Users,
   UserPlus,
   Activity,
+  Loader2,
+  Filter,
 } from "lucide-react";
 import Card from "@/components/ui/Card";
 import type { ActivityEvent } from "@/lib/data/get-activity-feed";
+
+const EVENT_TYPE_FILTERS = [
+  { value: "all", label: "All", icon: Activity },
+  { value: "response_created", label: "Responses", icon: BookOpen },
+  { value: "achievement_earned", label: "Achievements", icon: Trophy },
+  { value: "streak_milestone", label: "Streaks", icon: Flame },
+  { value: "friend_added", label: "Friends", icon: UserPlus },
+  { value: "joined_group", label: "Groups", icon: Users },
+] as const;
 
 function getEventIcon(type: string) {
   switch (type) {
@@ -35,26 +46,41 @@ function getEventDescription(event: ActivityEvent): string {
 
   switch (event.event_type) {
     case "response_created": {
-      const category = (data.category_slug as string) ?? "";
+      // event_data: { response_id, word_count, category_slug, category_name }
+      const category =
+        (data.category_name as string) ??
+        ((data.category_slug as string) ?? "").replace(/_/g, " ");
       const words = (data.word_count as number) ?? 0;
-      return `${name} journaled${category ? ` about ${category.replace(/_/g, " ")}` : ""}${words ? ` (${words} words)` : ""}`;
+      return `${name} journaled${category ? ` about ${category}` : ""}${words ? ` (${words} words)` : ""}`;
     }
     case "streak_milestone": {
-      const days = (data.streak as number) ?? 0;
-      return `${name} reached a ${days}-day journaling streak!`;
+      const days =
+        (data.streak_days as number) ?? (data.streak as number) ?? 0;
+      return days > 0
+        ? `${name} reached a ${days}-day journaling streak!`
+        : `${name} hit a journaling streak milestone!`;
     }
     case "achievement_earned": {
-      const achievement = (data.achievement as string) ?? "an achievement";
-      return `${name} earned ${achievement}`;
+      // event_data: { achievement_id, slug, name, icon }
+      const achievement =
+        (data.name as string) ?? (data.achievement as string) ?? "";
+      return achievement
+        ? `${name} earned the "${achievement}" achievement`
+        : `${name} earned an achievement`;
     }
     case "joined_group": {
       const groupName = (data.group_name as string) ?? "a group";
       return `${name} joined ${groupName}`;
     }
-    case "friend_added":
-      return `${name} made a new connection`;
+    case "friend_added": {
+      // event_data: { friend_id, friend_name }
+      const friendName = (data.friend_name as string) ?? "";
+      return friendName
+        ? `${name} connected with ${friendName}`
+        : `${name} made a new connection`;
+    }
     default:
-      return `${name} did something`;
+      return `${name} was active`;
   }
 }
 
@@ -75,10 +101,17 @@ interface Props {
 }
 
 export default function ActivityFeedClient({ initialEvents }: Props) {
-  const [events] = useState(initialEvents);
+  const [events, setEvents] = useState(initialEvents);
   const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(initialEvents.length >= 30);
+  const [typeFilter, setTypeFilter] = useState<string>("all");
 
-  async function loadMore() {
+  const filteredEvents = useMemo(() => {
+    if (typeFilter === "all") return events;
+    return events.filter((e) => e.event_type === typeFilter);
+  }, [events, typeFilter]);
+
+  const loadMore = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(
@@ -87,13 +120,16 @@ export default function ActivityFeedClient({ initialEvents }: Props) {
       if (res.ok) {
         const data = await res.json();
         if (data.events?.length > 0) {
-          // Would need setState here but keeping simple for now
+          setEvents((prev) => [...prev, ...data.events]);
+          setHasMore(data.events.length >= 20);
+        } else {
+          setHasMore(false);
         }
       }
     } finally {
       setLoading(false);
     }
-  }
+  }, [events.length]);
 
   return (
     <div className="max-w-3xl">
@@ -104,6 +140,29 @@ export default function ActivityFeedClient({ initialEvents }: Props) {
         <p className="text-sm text-charcoal/50 mt-1 font-medium">
           Recent activity from you and your friends
         </p>
+      </div>
+
+      {/* Type filter */}
+      <div className="flex items-center gap-1.5 mb-4 overflow-x-auto pb-1 animate-fade-in">
+        <Filter className="w-4 h-4 text-charcoal/40 flex-shrink-0 mr-1" />
+        {EVENT_TYPE_FILTERS.map((filter) => {
+          const Icon = filter.icon;
+          const isActive = typeFilter === filter.value;
+          return (
+            <button
+              key={filter.value}
+              onClick={() => setTypeFilter(filter.value)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold tracking-tight whitespace-nowrap transition-all duration-200 ${
+                isActive
+                  ? "bg-deep-sky text-white shadow-sm"
+                  : "bg-soft-gray text-charcoal/60 hover:bg-charcoal/10"
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {filter.label}
+            </button>
+          );
+        })}
       </div>
 
       {events.length === 0 ? (
@@ -118,13 +177,27 @@ export default function ActivityFeedClient({ initialEvents }: Props) {
             </p>
           </div>
         </Card>
+      ) : filteredEvents.length === 0 ? (
+        <Card padding="lg" className="animate-scale-in">
+          <div className="text-center py-6">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-deep-sky/8 to-deep-sky/3 flex items-center justify-center mx-auto mb-3">
+              <Activity className="w-6 h-6 text-charcoal/20" />
+            </div>
+            <p className="text-charcoal/60 text-sm font-semibold tracking-tight">
+              No {typeFilter.replace(/_/g, " ")} activity
+            </p>
+            <p className="text-xs text-charcoal/40 mt-1">
+              Try selecting a different filter to see more activity
+            </p>
+          </div>
+        </Card>
       ) : (
         <div className="relative">
           {/* Timeline line */}
           <div className="absolute left-[19px] top-3 bottom-3 w-px bg-gradient-to-b from-deep-sky/15 via-golden-hour/10 to-transparent" />
 
           <div className="space-y-1.5">
-            {events.map((event, i) => (
+            {filteredEvents.map((event, i) => (
               <div
                 key={event.id}
                 className="animate-slide-in-left"
@@ -149,13 +222,20 @@ export default function ActivityFeedClient({ initialEvents }: Props) {
             ))}
           </div>
 
-          {events.length >= 30 && (
+          {hasMore && typeFilter === "all" && (
             <button
               onClick={loadMore}
               disabled={loading}
-              className="w-full py-3 text-sm font-semibold text-deep-sky hover:text-deep-sky/80 transition-all duration-200 mt-2"
+              className="w-full inline-flex items-center justify-center gap-2 py-3 text-sm font-semibold text-deep-sky hover:text-deep-sky/80 transition-all duration-200 mt-2 disabled:opacity-50"
             >
-              {loading ? "Loading..." : "Load more"}
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                "Load more"
+              )}
             </button>
           )}
         </div>

@@ -1,47 +1,95 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 
-const VALID_TYPES = ["bug", "idea", "praise", "other"] as const;
+function getServiceClient() {
+  return createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
-export async function POST(request: NextRequest) {
-  const supabase = createClient();
+export async function POST(req: NextRequest) {
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+    const body = await req.json();
+    const { type, title, description, page_url, metadata } = body;
 
-  const body = await request.json();
-  const { type, message, page_url } = body;
+    if (!type || !title) {
+      return NextResponse.json(
+        { error: "Type and title are required" },
+        { status: 400 }
+      );
+    }
 
-  if (!message?.trim()) {
-    return NextResponse.json(
-      { error: "Please write a short message first" },
-      { status: 400 }
-    );
-  }
+    const admin = getServiceClient();
+    const { data, error } = await admin
+      .from("feedback")
+      .insert({
+        user_id: user.id,
+        type,
+        title,
+        description: description || null,
+        page_url: page_url || null,
+        user_agent: req.headers.get("user-agent") || null,
+        metadata: metadata || {},
+      })
+      .select()
+      .single();
 
-  if (message.trim().length > 4000) {
-    return NextResponse.json(
-      { error: "Message is too long (4000 characters max)" },
-      { status: 400 }
-    );
-  }
+    if (error) throw error;
 
-  const { error } = await supabase.from("feedback").insert({
-    user_id: user.id,
-    type: VALID_TYPES.includes(type) ? type : "other",
-    message: message.trim(),
-    page_url: typeof page_url === "string" ? page_url.slice(0, 500) : null,
-    user_agent: request.headers.get("user-agent")?.slice(0, 500) ?? null,
-  });
-
-  if (error) {
+    return NextResponse.json({ success: true, feedback: data });
+  } catch (error: any) {
+    console.error("Feedback submission error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+}
 
-  return NextResponse.json({ success: true });
+export async function GET(req: NextRequest) {
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const admin = getServiceClient();
+
+    // Check if admin
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("is_admin")
+      .eq("id", user.id)
+      .single();
+
+    let query = admin
+      .from("feedback")
+      .select("*, profiles(full_name, email)");
+
+    if (!profile?.is_admin) {
+      query = query.eq("user_id", user.id);
+    }
+
+    const { data, error } = await query.order("created_at", {
+      ascending: false,
+    });
+
+    if (error) throw error;
+
+    return NextResponse.json({ feedback: data });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 }

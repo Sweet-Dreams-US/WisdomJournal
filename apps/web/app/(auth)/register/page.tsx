@@ -102,8 +102,8 @@ export default function RegisterPage() {
       return;
     }
 
-    // Store code in localStorage for the callback to pick up
-    localStorage.setItem("beta_code", betaCode.trim().toUpperCase());
+    // Store code in a cookie for the server-side callback to pick up
+    document.cookie = `beta_code=${betaCode.trim().toUpperCase()}; path=/; max-age=300; SameSite=Lax`;
 
     const supabase = createClient();
     await supabase.auth.signInWithOAuth({
@@ -161,6 +161,14 @@ export default function RegisterPage() {
         {error && (
           <div className="p-3 rounded-input bg-error/10 border border-error/20 text-error text-sm font-body">
             {error}
+            {error.includes("already exists") && (
+              <Link
+                href="/login"
+                className="block mt-2 text-sky-blue hover:underline font-semibold text-center"
+              >
+                Sign In
+              </Link>
+            )}
           </div>
         )}
 
@@ -170,9 +178,9 @@ export default function RegisterPage() {
 
         <p className="text-xs font-body text-white/20 text-center leading-relaxed">
           By creating an account, you agree to our{" "}
-          <a href="#" className="text-white/30 hover:text-white/50 underline">Terms</a>
+          <Link href="/terms" className="text-white/30 hover:text-white/50 underline">Terms</Link>
           {" "}and{" "}
-          <a href="#" className="text-white/30 hover:text-white/50 underline">Privacy Policy</a>.
+          <Link href="/privacy" className="text-white/30 hover:text-white/50 underline">Privacy Policy</Link>.
         </p>
       </form>
 

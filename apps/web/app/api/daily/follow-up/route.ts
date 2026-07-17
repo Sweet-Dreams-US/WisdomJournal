@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { generateFollowUpQuestions } from "@/lib/ai/follow-up-questions";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST() {
   const supabase = createClient();
@@ -9,6 +10,15 @@ export async function POST() {
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Rate limit: 3 follow-up generations per hour
+  const limit = rateLimit(user.id, "follow-up-gen", 3, 60 * 60 * 1000);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Follow-up limit reached. Try again later." },
+      { status: 429 }
+    );
   }
 
   const today = new Date().toISOString().split("T")[0];

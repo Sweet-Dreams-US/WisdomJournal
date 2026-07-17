@@ -1,10 +1,11 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Mail, ArrowLeft, CheckCircle } from "lucide-react";
+import { Mail, ArrowLeft, CheckCircle, RefreshCw } from "lucide-react";
 import Button from "@/components/ui/Button";
+import { createClient } from "@/lib/supabase/client";
 
 export default function VerifyEmailPage() {
   return (
@@ -22,6 +23,33 @@ function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const confirmed = searchParams.get("confirmed") === "true";
   const email = searchParams.get("email");
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(false);
+  const [resendError, setResendError] = useState<string | null>(null);
+
+  const handleResend = useCallback(async () => {
+    if (!email || resendCooldown) return;
+    setResendLoading(true);
+    setResendError(null);
+    setResendSuccess(false);
+
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.resend({ type: "signup", email });
+      if (error) {
+        setResendError(error.message);
+      } else {
+        setResendSuccess(true);
+        setResendCooldown(true);
+        setTimeout(() => setResendCooldown(false), 60000);
+      }
+    } catch {
+      setResendError("Something went wrong. Please try again.");
+    } finally {
+      setResendLoading(false);
+    }
+  }, [email, resendCooldown]);
 
   // After email is confirmed (redirected here from callback)
   if (confirmed) {
@@ -72,6 +100,35 @@ function VerifyEmailContent() {
       </p>
 
       <div className="space-y-3">
+        {email && (
+          <Button
+            variant="outline"
+            fullWidth
+            onClick={handleResend}
+            disabled={resendLoading || resendCooldown}
+            type="button"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${resendLoading ? "animate-spin" : ""}`} />
+            {resendLoading
+              ? "Sending..."
+              : resendCooldown
+                ? "Email Resent! Check your inbox"
+                : "Resend Verification Email"}
+          </Button>
+        )}
+
+        {resendSuccess && !resendError && (
+          <p className="font-body text-xs text-emerald-400 text-center">
+            Email resent! Check your inbox.
+          </p>
+        )}
+
+        {resendError && (
+          <p className="font-body text-xs text-error text-center">
+            {resendError}
+          </p>
+        )}
+
         <div className="p-4 rounded-xl bg-white/3 border border-white/5">
           <p className="font-body text-xs text-white/30 leading-relaxed">
             <span className="text-white/50 font-semibold">Tip:</span> If you

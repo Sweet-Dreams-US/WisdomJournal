@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, DM_Sans, IBM_Plex_Mono } from "next/font/google";
 import { ServiceWorkerRegister } from "@/components/app/ServiceWorkerRegister";
+import ErrorTrackingProvider from "@/components/app/ErrorTrackingProvider";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -81,7 +82,7 @@ export default function RootLayout({
     >
       <body>
         <ServiceWorkerRegister />
-        {children}
+        <ErrorTrackingProvider>{children}</ErrorTrackingProvider>
       </body>
     </html>
   );

@@ -189,41 +189,55 @@ export default function ProfileClient({
       {/* Notifications */}
       <h3 className="text-lg font-bold text-twilight mb-3">Notifications</h3>
       <Card padding="md" className="mb-6">
+        <p className="text-xs text-charcoal/50 mb-4">
+          Control how and when you receive notifications. Changes are saved automatically.
+        </p>
         <div className="space-y-4">
           {[
-            { key: "daily_reminder" as const, label: "Daily reminder", desc: "Get reminded to answer your daily questions" },
-            { key: "streak_warning" as const, label: "Streak warning", desc: "Warn when you're about to lose your streak" },
-            { key: "group_invites" as const, label: "Group invites", desc: "Notify when you receive a group invitation" },
-            { key: "query_received" as const, label: "Wisdom queries", desc: "Notify when someone queries your wisdom" },
-            { key: "achievements" as const, label: "Achievements", desc: "Celebrate when you earn a new achievement" },
-            { key: "email_digest" as const, label: "Weekly email digest", desc: "Summary of your weekly activity" },
+            { key: "daily_reminder" as const, label: "Daily reminder", desc: "Get a daily push notification reminding you to answer your questions" },
+            { key: "streak_warning" as const, label: "Streak warning", desc: "Receive an alert when your journaling streak is about to expire" },
+            { key: "group_invites" as const, label: "Group invites", desc: "Get notified when someone invites you to join a wisdom group" },
+            { key: "query_received" as const, label: "Wisdom queries", desc: "Get notified when a friend or family member queries your shared wisdom" },
+            { key: "achievements" as const, label: "Achievements", desc: "Receive a notification when you earn a new milestone or badge" },
+            { key: "email_digest" as const, label: "Weekly email digest", desc: "Receive a weekly email summary of your journaling activity and stats" },
           ].map((item) => (
-            <label key={item.key} className="flex items-center justify-between cursor-pointer">
-              <div>
+            <button
+              key={item.key}
+              type="button"
+              role="switch"
+              aria-checked={notifPrefs[item.key] as boolean}
+              onClick={() => toggleNotif(item.key)}
+              className="flex items-center justify-between w-full text-left cursor-pointer group"
+            >
+              <div className="pr-4">
                 <p className="text-sm font-medium text-charcoal">{item.label}</p>
                 <p className="text-xs text-charcoal/50">{item.desc}</p>
               </div>
-              <div className="relative">
-                <input
-                  type="checkbox"
-                  checked={notifPrefs[item.key] as boolean}
-                  onChange={() => toggleNotif(item.key)}
-                  className="sr-only peer"
+              <div
+                className={`relative flex-shrink-0 w-10 h-6 rounded-full transition-colors ${
+                  notifPrefs[item.key] ? "bg-deep-sky" : "bg-soft-gray"
+                }`}
+              >
+                <div
+                  className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
+                    notifPrefs[item.key] ? "left-[18px]" : "left-0.5"
+                  }`}
                 />
-                <div className="w-10 h-6 bg-soft-gray rounded-full peer-checked:bg-deep-sky transition-colors" />
-                <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform peer-checked:translate-x-4" />
               </div>
-            </label>
+            </button>
           ))}
 
-          <div className="pt-2 border-t border-soft-gray flex items-center gap-3">
+          <div className="pt-3 border-t border-soft-gray flex items-center gap-3">
             <Clock className="w-4 h-4 text-charcoal/40" />
-            <span className="text-sm text-charcoal/60">Reminder time:</span>
+            <div>
+              <span className="text-sm text-charcoal/70 font-medium">Reminder time</span>
+              <p className="text-xs text-charcoal/50">Set what time you want your daily reminder sent</p>
+            </div>
             <input
               type="time"
               value={notifPrefs.reminder_time}
               onChange={(e) => updateReminderTime(e.target.value)}
-              className="text-sm font-body text-charcoal border border-soft-gray rounded-input px-2 py-1"
+              className="ml-auto text-sm font-body text-charcoal border border-soft-gray rounded-input px-2 py-1"
             />
           </div>
         </div>

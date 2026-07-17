@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Search, Sparkles, Info, Star, ChevronDown, Clock, MessageCircle, Users } from "lucide-react";
+import { Search, Sparkles, Info, Star, ChevronDown, Clock, MessageCircle, Users, RefreshCw } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import EmptyState from "@/components/ui/EmptyState";
@@ -10,6 +10,7 @@ import type { UserProfile, WisdomQuery } from "@wisdom-journal/shared";
 import { plural } from "@/lib/utils/plural";
 
 type QueryMode = "personality" | "neutral";
+type ResponseLength = "concise" | "full";
 
 interface AiResult {
   id?: string;
@@ -38,6 +39,7 @@ export default function AskClient({ profile, pastQueries, friendOptions = [] }: 
 
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<QueryMode>("personality");
+  const [responseLength, setResponseLength] = useState<ResponseLength>("concise");
   const [targetFriend, setTargetFriend] = useState(initialFriend);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AiResult | null>(null);
@@ -45,6 +47,7 @@ export default function AskClient({ profile, pastQueries, friendOptions = [] }: 
   const [showSources, setShowSources] = useState(false);
   const [showHistory, setShowHistory] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [followUps, setFollowUps] = useState<string[]>([]);
 
   const selectedFriend = friendOptions.find((f) => f.friendshipId === targetFriend);
   const firstName = selectedFriend
@@ -58,6 +61,7 @@ export default function AskClient({ profile, pastQueries, friendOptions = [] }: 
     setResult(null);
     setRating(0);
     setError(null);
+    setFollowUps([]);
 
     try {
       const res = await fetch("/api/wisdom/query", {
@@ -66,6 +70,7 @@ export default function AskClient({ profile, pastQueries, friendOptions = [] }: 
         body: JSON.stringify({
           query_text: query.trim(),
           mode,
+          response_length: responseLength,
           ...(selectedFriend ? { target_user_id: selectedFriend.userId } : {}),
         }),
       });
@@ -74,6 +79,7 @@ export default function AskClient({ profile, pastQueries, friendOptions = [] }: 
       if (res.ok) {
         if (data.ai_response) {
           setResult(data);
+          setFollowUps(generateFollowUps(query.trim()));
         } else {
           setError("No response was generated. Try a different question or add more journal entries first.");
         }
@@ -100,6 +106,127 @@ export default function AskClient({ profile, pastQueries, friendOptions = [] }: 
         // Silent fail for rating
       }
     }
+  }
+
+  async function handleRegenerate() {
+    if (!query.trim() || loading) return;
+    setLoading(true);
+    setResult(null);
+    setRating(0);
+    setError(null);
+    setFollowUps([]);
+
+    try {
+      const res = await fetch("/api/wisdom/query", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query_text: query.trim(),
+          mode,
+          response_length: responseLength,
+          ...(selectedFriend ? { target_user_id: selectedFriend.userId } : {}),
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.ai_response) {
+        setResult(data);
+        setFollowUps(generateFollowUps(query.trim()));
+      } else {
+        setError(data.error || "No response was generated. Try a different question.");
+      }
+    } catch {
+      setError("Network error. Please check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function generateFollowUps(q: string): string[] {
+    const lower = q.toLowerCase();
+    const suggestions: string[] = [];
+
+    // Category-aware follow-up generation
+    const topicMap: Record<string, string[]> = {
+      career: [
+        "What obstacles have I faced in my career?",
+        "How has my thinking about work changed over time?",
+        "What motivates me professionally?",
+      ],
+      goal: [
+        "What obstacles have I faced reaching my goals?",
+        "How has my thinking about goals changed?",
+        "What goals have I already achieved?",
+      ],
+      relationship: [
+        "What patterns show up in my relationships?",
+        "How do I handle conflict with others?",
+        "What do I value most in people?",
+      ],
+      family: [
+        "What lessons have I learned from my family?",
+        "How have my family relationships evolved?",
+        "What traditions matter most to me?",
+      ],
+      health: [
+        "What habits have helped my wellbeing?",
+        "How has my approach to health changed?",
+        "What challenges have I faced with my health?",
+      ],
+      values: [
+        "How do my values show up in daily life?",
+        "Have my core values shifted over time?",
+        "When have my values been tested?",
+      ],
+      fear: [
+        "How have I overcome past fears?",
+        "What gives me courage when I'm afraid?",
+        "How have my fears changed over time?",
+      ],
+      gratitude: [
+        "What am I most grateful for right now?",
+        "How does gratitude affect my outlook?",
+        "What unexpected things have I been thankful for?",
+      ],
+      growth: [
+        "What has been my biggest area of growth?",
+        "What experiences shaped who I am today?",
+        "Where do I still want to grow?",
+      ],
+    };
+
+    // Find matching topic
+    for (const [topic, qs] of Object.entries(topicMap)) {
+      if (lower.includes(topic)) {
+        suggestions.push(...qs.filter((s) => s.toLowerCase() !== lower));
+        break;
+      }
+    }
+
+    // Generic follow-ups if no topic match
+    if (suggestions.length === 0) {
+      const generic = [
+        `How has my thinking about this changed over time?`,
+        `What patterns emerge from my reflections on this?`,
+        `What have I learned about myself through this?`,
+      ];
+      suggestions.push(...generic);
+    }
+
+    return suggestions.slice(0, 3);
+  }
+
+  function handleFollowUp(followUpQuery: string) {
+    setQuery(followUpQuery);
+    setResult(null);
+    setRating(0);
+    setError(null);
+    setFollowUps([]);
+    // Auto-submit after a short delay to let state settle
+    setTimeout(() => {
+      const form = document.querySelector("form");
+      if (form) form.requestSubmit();
+    }, 50);
   }
 
   return (
@@ -196,12 +323,38 @@ export default function AskClient({ profile, pastQueries, friendOptions = [] }: 
               Neutral Mode
             </button>
           </div>
+          <div className="inline-flex rounded-xl bg-soft-gray p-1">
+            <button
+              type="button"
+              onClick={() => setResponseLength("concise")}
+              className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
+                responseLength === "concise"
+                  ? "bg-white text-deep-sky shadow-sm"
+                  : "text-charcoal/60 hover:text-charcoal"
+              }`}
+            >
+              Concise
+            </button>
+            <button
+              type="button"
+              onClick={() => setResponseLength("full")}
+              className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
+                responseLength === "full"
+                  ? "bg-white text-deep-sky shadow-sm"
+                  : "text-charcoal/60 hover:text-charcoal"
+              }`}
+            >
+              Full Detail
+            </button>
+          </div>
           <div className="group relative">
             <Info className="w-4 h-4 text-charcoal/30 cursor-help" />
             <div className="absolute bottom-full left-0 mb-2 w-64 p-3 bg-twilight text-white text-xs rounded-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 shadow-lg">
               <strong>Personality Mode</strong> responds in {firstName}&apos;s voice and style.
-              <br /><br />
               <strong>Neutral Mode</strong> gives factual answers drawn from the entries.
+              <br /><br />
+              <strong>Concise</strong> gives a short AI-summarized answer.
+              <strong>Full Detail</strong> gives the complete response with full context.
             </div>
           </div>
           <div className="flex-1" />
@@ -273,29 +426,59 @@ export default function AskClient({ profile, pastQueries, friendOptions = [] }: 
               </>
             )}
 
-            {/* Rating */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-charcoal/50">Rate this response:</span>
-              <div className="flex gap-0.5">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    onClick={() => handleRate(star)}
-                    className="p-0.5"
-                  >
-                    <Star
-                      className={`w-4 h-4 transition-colors ${
-                        star <= rating
-                          ? "text-golden-hour fill-golden-hour"
-                          : "text-charcoal/20 hover:text-golden-hour/50"
-                      }`}
-                    />
-                  </button>
-                ))}
+            {/* Rating + Regenerate */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-charcoal/50">Rate this response:</span>
+                <div className="flex gap-0.5">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      onClick={() => handleRate(star)}
+                      className="p-0.5"
+                    >
+                      <Star
+                        className={`w-4 h-4 transition-colors ${
+                          star <= rating
+                            ? "text-golden-hour fill-golden-hour"
+                            : "text-charcoal/20 hover:text-golden-hour/50"
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
               </div>
+              <button
+                onClick={handleRegenerate}
+                disabled={loading}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-charcoal/50 hover:text-deep-sky hover:bg-deep-sky/5 transition-colors disabled:opacity-50"
+                title="Try again with the same question"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+                Try Again
+              </button>
             </div>
           </div>
         </Card>
+      )}
+
+      {/* Follow-up suggestions */}
+      {result && !loading && followUps.length > 0 && (
+        <div className="mb-6">
+          <p className="text-xs text-charcoal/50 mb-2 font-body">Continue exploring:</p>
+          <div className="flex flex-col gap-2">
+            {followUps.map((followUp) => (
+              <button
+                key={followUp}
+                onClick={() => handleFollowUp(followUp)}
+                className="text-left px-4 py-2.5 rounded-xl border border-soft-gray bg-white hover:border-deep-sky/30 hover:bg-deep-sky/5 transition-all text-sm text-charcoal/70 hover:text-charcoal group"
+              >
+                <Search className="w-3.5 h-3.5 inline mr-2 text-charcoal/30 group-hover:text-deep-sky transition-colors" />
+                {followUp}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Query history */}

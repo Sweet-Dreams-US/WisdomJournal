@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { chatCompletion, AI_MODELS } from "@/lib/ai/openrouter";
+import { rateLimit } from "@/lib/rate-limit";
+
+// In-memory cache for category insights: key = `${userId}:${categoryId}`
+const insightsCache = new Map<
+  string,
+  { data: { summary: string; themes: string[]; patterns: string[]; response_count: number }; timestamp: number }
+>();
+
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+function getCacheKey(userId: string, categoryId: string): string {
+  return `${userId}:${categoryId}`;
+}
 
 export async function POST(request: NextRequest) {
   const supabase = createClient();
@@ -13,13 +26,31 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { category_id, category_name } = await request.json();
+  // Rate limit: 10 insight requests per 10 minutes
+  const limit = rateLimit(user.id, "category-insight", 10, 10 * 60 * 1000);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Too many insight requests. Please wait a few minutes." },
+      { status: 429 }
+    );
+  }
+
+  const { category_id, category_name, force } = await request.json();
 
   if (!category_id) {
     return NextResponse.json(
       { error: "category_id is required" },
       { status: 400 }
     );
+  }
+
+  // Check cache (unless force refresh is requested)
+  const cacheKey = getCacheKey(user.id, category_id);
+  if (!force) {
+    const cached = insightsCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+      return NextResponse.json({ ...cached.data, cached: true });
+    }
   }
 
   // Fetch user's responses in this category
@@ -86,12 +117,17 @@ Rules:
       .trim();
     const parsed = JSON.parse(cleaned);
 
-    return NextResponse.json({
+    const responseData = {
       summary: parsed.summary || "",
       themes: Array.isArray(parsed.themes) ? parsed.themes : [],
       patterns: Array.isArray(parsed.patterns) ? parsed.patterns : [],
       response_count: responses.length,
-    });
+    };
+
+    // Store in cache
+    insightsCache.set(cacheKey, { data: responseData, timestamp: Date.now() });
+
+    return NextResponse.json(responseData);
   } catch (error) {
     console.error("Category insight generation failed:", error);
     return NextResponse.json(

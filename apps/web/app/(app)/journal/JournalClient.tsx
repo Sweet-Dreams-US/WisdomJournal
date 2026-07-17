@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Loader2 } from "lucide-react";
 import CalendarStrip from "@/components/ui/CalendarStrip";
 import SearchInput from "@/components/ui/SearchInput";
 import FilterBar from "@/components/ui/FilterBar";
@@ -10,7 +10,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import ResponseCard from "@/components/app/ResponseCard";
 import { CATEGORIES } from "@wisdom-journal/shared";
 import type { JournalResponse } from "@wisdom-journal/shared";
-import { toLocalDateKey, todayKey } from "@/lib/utils/dates";
+import { toLocalDateKey } from "@/lib/utils/dates";
 
 function formatDateHeading(dateStr: string): string {
   const date = new Date(dateStr + "T00:00:00");
@@ -35,11 +35,19 @@ function formatDateHeading(dateStr: string): string {
 
 interface JournalClientProps {
   initialResponses: JournalResponse[];
+  initialTotal: number;
 }
 
-export default function JournalClient({ initialResponses }: JournalClientProps) {
+export default function JournalClient({
+  initialResponses,
+  initialTotal,
+}: JournalClientProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  const [responses, setResponses] = useState(initialResponses);
+  const [totalCount, setTotalCount] = useState(initialTotal);
+  const [loading, setLoading] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") ?? "");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(
@@ -53,15 +61,15 @@ export default function JournalClient({ initialResponses }: JournalClientProps) 
   // Build set of dates that have entries
   const datesWithEntries = useMemo(() => {
     const dates = new Set<string>();
-    initialResponses.forEach((r) => {
+    responses.forEach((r) => {
       dates.add(toLocalDateKey(r.created_at));
     });
     return dates;
-  }, [initialResponses]);
+  }, [responses]);
 
-  // Filter responses
+  // Filter responses client-side (for category filtering on already-loaded data)
   const filteredResponses = useMemo(() => {
-    return initialResponses.filter((r) => {
+    return responses.filter((r) => {
       // Category filter (uses join data)
       if (selectedCategory) {
         const primaryCategory = (r as any).categories?.[0]?.category;
@@ -73,7 +81,7 @@ export default function JournalClient({ initialResponses }: JournalClientProps) 
         return false;
       }
 
-      // Text search
+      // Text search (client-side refinement)
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
         const text = (r.response_text ?? "").toLowerCase();
@@ -83,7 +91,7 @@ export default function JournalClient({ initialResponses }: JournalClientProps) 
 
       return true;
     });
-  }, [initialResponses, selectedCategory, searchQuery, selectedDate]);
+  }, [responses, selectedCategory, searchQuery, selectedDate]);
 
   // Group by date
   const groupedResponses = useMemo(() => {
@@ -97,6 +105,50 @@ export default function JournalClient({ initialResponses }: JournalClientProps) 
     return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
   }, [filteredResponses]);
 
+  const loadMore = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set("offset", String(responses.length));
+      params.set("limit", "20");
+      if (searchQuery) params.set("q", searchQuery);
+
+      const res = await fetch(`/api/responses?${params.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.responses?.length > 0) {
+          setResponses((prev) => [...prev, ...data.responses]);
+          setTotalCount(data.total);
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [responses.length, searchQuery]);
+
+  // Reset and re-fetch when filters change significantly
+  const resetAndFetch = useCallback(
+    async (query: string) => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams();
+        params.set("offset", "0");
+        params.set("limit", "20");
+        if (query) params.set("q", query);
+
+        const res = await fetch(`/api/responses?${params.toString()}`);
+        if (res.ok) {
+          const data = await res.json();
+          setResponses(data.responses ?? []);
+          setTotalCount(data.total ?? 0);
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
   function updateParams(key: string, value: string | null) {
     const params = new URLSearchParams(searchParams.toString());
     if (value) {
@@ -106,6 +158,8 @@ export default function JournalClient({ initialResponses }: JournalClientProps) 
     }
     router.replace(`/journal?${params.toString()}`, { scroll: false });
   }
+
+  const hasMore = responses.length < totalCount;
 
   const filterItems = CATEGORIES.map((c) => ({ slug: c.slug, name: c.name }));
 
@@ -139,8 +193,13 @@ export default function JournalClient({ initialResponses }: JournalClientProps) 
           placeholder="Search your entries..."
           value={searchQuery}
           onChange={(e) => {
-            setSearchQuery(e.target.value);
-            updateParams("q", e.target.value || null);
+            const val = e.target.value;
+            setSearchQuery(val);
+            updateParams("q", val || null);
+            // Re-fetch from API when search changes
+            if (val.length === 0 || val.length >= 2) {
+              resetAndFetch(val);
+            }
           }}
         />
         <FilterBar
@@ -152,6 +211,13 @@ export default function JournalClient({ initialResponses }: JournalClientProps) 
           }}
         />
       </div>
+
+      {/* Count indicator */}
+      {filteredResponses.length > 0 && (
+        <p className="text-xs text-charcoal/50 mb-4">
+          Showing {filteredResponses.length} of {totalCount} responses
+        </p>
+      )}
 
       {/* Response list */}
       {groupedResponses.length === 0 ? (
@@ -178,6 +244,26 @@ export default function JournalClient({ initialResponses }: JournalClientProps) 
               </div>
             </div>
           ))}
+
+          {/* Load More button */}
+          {hasMore && (
+            <div className="flex justify-center pt-4">
+              <button
+                onClick={loadMore}
+                disabled={loading}
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-medium text-deep-sky bg-deep-sky/10 hover:bg-deep-sky/20 transition-colors disabled:opacity-50"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  "Load More"
+                )}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

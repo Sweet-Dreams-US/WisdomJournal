@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { processWisdomQuery } from "@/lib/ai/wisdom-query";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   const supabase = createClient();
@@ -13,7 +14,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { query_text, target_user_id, group_id, mode } =
+  // Rate limit: 20 queries per 15 minutes
+  const limit = rateLimit(user.id, "wisdom-query", 20, 15 * 60 * 1000);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Too many queries. Please wait a few minutes." },
+      { status: 429 }
+    );
+  }
+
+  const { query_text, target_user_id, group_id, mode, response_length } =
     await request.json();
 
   if (!query_text?.trim()) {
@@ -32,6 +42,7 @@ export async function POST(request: NextRequest) {
     queryText: query_text.trim(),
     groupId: group_id || null,
     mode: mode || "personality",
+    responseLength: response_length || "concise",
   });
 
   if (result.error) {

@@ -20,12 +20,13 @@ import {
   Users2,
   CalendarDays,
   Award,
+  MessageSquare,
   type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useSidebar } from "./SidebarProvider";
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useProfile } from "@/lib/hooks/use-profile";
 
 const navSections: {
@@ -68,10 +69,37 @@ export default function Sidebar() {
   const router = useRouter();
   const { isOpen, close } = useSidebar();
   const { profile } = useProfile();
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     close();
   }, [pathname, close]);
+
+  // Fetch unread notification count
+  const fetchUnreadCount = useCallback(async () => {
+    try {
+      const res = await fetch("/api/notifications/inbox");
+      if (res.ok) {
+        const data = await res.json();
+        setUnreadCount(data.unread_count ?? 0);
+      }
+    } catch {
+      // Silently fail - non-critical
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 60_000);
+    return () => clearInterval(interval);
+  }, [fetchUnreadCount]);
+
+  // Reset count when visiting notifications page
+  useEffect(() => {
+    if (pathname === "/notifications") {
+      setUnreadCount(0);
+    }
+  }, [pathname]);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -126,6 +154,7 @@ export default function Sidebar() {
                     item.href === "/dashboard"
                       ? pathname === "/dashboard"
                       : pathname.startsWith(item.href);
+                  const isNotifications = item.href === "/notifications";
                   return (
                     <li key={item.href}>
                       <Link
@@ -145,7 +174,12 @@ export default function Sidebar() {
                             isActive ? "text-deep-sky" : ""
                           }`}
                         />
-                        {item.label}
+                        <span className="flex-1">{item.label}</span>
+                        {isNotifications && unreadCount > 0 && (
+                          <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-sunrise-coral text-white text-[11px] font-bold leading-none">
+                            {unreadCount > 9 ? "9+" : unreadCount}
+                          </span>
+                        )}
                       </Link>
                     </li>
                   );
@@ -156,8 +190,18 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Sign out */}
-      <div className="p-3 border-t border-charcoal/[0.06]">
+      {/* Feedback + Sign out */}
+      <div className="p-3 border-t border-charcoal/[0.06] space-y-0.5">
+        <button
+          onClick={() => {
+            // Trigger the floating feedback widget
+            window.dispatchEvent(new CustomEvent("open-feedback"));
+          }}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-charcoal/50 hover:text-charcoal hover:bg-charcoal/[0.03] transition-all duration-200 w-full"
+        >
+          <MessageSquare className="w-[18px] h-[18px]" />
+          Send Feedback
+        </button>
         <button
           onClick={handleSignOut}
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-charcoal/50 hover:text-charcoal hover:bg-charcoal/[0.03] transition-all duration-200 w-full"

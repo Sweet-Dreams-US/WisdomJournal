@@ -1,348 +1,220 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Users, FileText, Flame, Key, Shield, UserX, Plus, Bug, Lightbulb, Heart, MessageCircle } from "lucide-react";
-import Card from "@/components/ui/Card";
-import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
+import {
+  Shield, BarChart3, Users, Key, MessageSquare,
+  AlertTriangle, Activity, RefreshCw,
+} from "lucide-react";
+import { SkeletonGrid, SkeletonList, CountBadge } from "@/components/admin/AdminShared";
+import OverviewTab from "@/components/admin/OverviewTab";
+import UsersTab from "@/components/admin/UsersTab";
+import BetaTab from "@/components/admin/BetaTab";
+import FeedbackTab from "@/components/admin/FeedbackTab";
+import ErrorsTab from "@/components/admin/ErrorsTab";
+import ActivityTab from "@/components/admin/ActivityTab";
+
+type Tab = "overview" | "users" | "beta" | "feedback" | "errors" | "activity";
 
 interface AdminStats {
   total_users: number;
   total_responses: number;
+  active_users_24h: number;
   active_users_7d: number;
-  beta_codes: BetaCode[];
-  recent_users: AdminUser[];
-  feedback: FeedbackItem[];
-}
-
-interface FeedbackItem {
-  id: string;
-  type: "bug" | "idea" | "praise" | "other";
-  message: string;
-  page_url: string | null;
-  status: "new" | "reviewed" | "resolved";
-  created_at: string;
-  profile: { full_name: string | null; email: string } | null;
-}
-
-interface BetaCode {
-  id: string;
-  code: string;
-  max_uses: number;
-  used_count: number;
-  is_active: boolean;
-  created_at: string;
-}
-
-interface AdminUser {
-  id: string;
-  email: string;
-  full_name: string | null;
-  total_responses: number;
-  current_streak: number;
-  created_at: string;
-  beta_code_used: string | null;
-  is_admin: boolean;
+  active_users_30d: number;
+  onboarded_users: number;
+  total_word_count: number;
+  total_friendships: number;
+  total_groups: number;
+  funnel: {
+    signed_up: number;
+    onboarded: number;
+    first_response: number;
+    five_plus_responses: number;
+  };
+  ai: {
+    total_queries: number;
+    total_cost_cents: number;
+    total_tokens_in: number;
+    total_tokens_out: number;
+    week_queries: number;
+    week_cost_cents: number;
+  };
+  errors: {
+    last_24h: number;
+    last_7d: number;
+  };
+  feedback: {
+    total: number;
+    by_status: Record<string, number>;
+  };
+  daily_activity: Record<string, number>;
+  daily_signups: Record<string, number>;
+  responses_by_day: { date: string; count: number }[];
+  signups_by_day: { date: string; count: number }[];
+  beta_codes: any[];
+  all_users: any[];
+  top_users: any[];
 }
 
 export default function AdminClient() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [newCode, setNewCode] = useState("");
-  const [newCodeMax, setNewCodeMax] = useState("15");
-  const [creating, setCreating] = useState(false);
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
   useEffect(() => {
     fetchStats();
   }, []);
 
   async function fetchStats() {
+    setLoading(true);
     try {
       const res = await fetch("/api/admin/stats");
-      if (res.ok) setStats(await res.json());
+      if (res.ok) {
+        setStats(await res.json());
+        setLastRefresh(new Date());
+      }
     } catch {} finally {
       setLoading(false);
     }
   }
 
-  async function createCode() {
-    if (!newCode.trim() || creating) return;
-    setCreating(true);
-    try {
-      const res = await fetch("/api/admin/codes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: newCode.trim(), max_uses: parseInt(newCodeMax) || 15 }),
-      });
-      if (res.ok) {
-        setNewCode("");
-        fetchStats();
-      }
-    } catch {} finally {
-      setCreating(false);
+  function handleQuickAction(action: string) {
+    switch (action) {
+      case "create-code":
+        setActiveTab("beta");
+        break;
+      case "errors":
+        setActiveTab("errors");
+        break;
+      case "invite":
+        setActiveTab("beta");
+        break;
     }
   }
 
-  async function toggleCode(id: string, active: boolean) {
-    await fetch("/api/admin/codes", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, is_active: active }),
-    });
-    fetchStats();
-  }
-
-  async function toggleAdmin(userId: string, isAdmin: boolean) {
-    await fetch("/api/admin/users", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id: userId, is_admin: isAdmin }),
-    });
-    fetchStats();
-  }
-
-  async function setFeedbackStatus(id: string, status: FeedbackItem["status"]) {
-    await fetch("/api/admin/feedback", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, status }),
-    });
-    fetchStats();
-  }
-
-  async function markDeceased(userId: string, deceased: boolean) {
-    if (deceased && !confirm("This will activate legacy mode for this user. Their legacy contacts will gain access to their wisdom. Continue?")) return;
-    await fetch("/api/admin/users", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id: userId, is_deceased: deceased }),
-    });
-    fetchStats();
-  }
-
-  if (loading) {
-    return (
-      <div className="max-w-5xl animate-pulse space-y-4">
-        <div className="h-8 bg-soft-gray rounded w-48" />
-        <div className="grid grid-cols-4 gap-4">
-          {[1,2,3,4].map(i => <div key={i} className="h-24 bg-soft-gray rounded-2xl" />)}
-        </div>
-      </div>
-    );
-  }
-
-  if (!stats) return <p className="text-charcoal/60">Failed to load admin data.</p>;
-
-  const totalCodeUses = stats.beta_codes.reduce((sum, c) => sum + c.used_count, 0);
-  const totalCodeSlots = stats.beta_codes.reduce((sum, c) => sum + c.max_uses, 0);
+  // Tab config
+  const tabs: { key: Tab; label: string; icon: React.ReactNode; badge?: number }[] = [
+    { key: "overview", label: "Overview", icon: <BarChart3 className="w-4 h-4" /> },
+    { key: "users", label: "Users", icon: <Users className="w-4 h-4" />, badge: stats?.total_users },
+    { key: "beta", label: "Beta", icon: <Key className="w-4 h-4" />, badge: stats?.beta_codes?.length },
+    {
+      key: "feedback",
+      label: "Feedback",
+      icon: <MessageSquare className="w-4 h-4" />,
+      badge: stats?.feedback?.by_status?.new || 0,
+    },
+    {
+      key: "errors",
+      label: "Errors",
+      icon: <AlertTriangle className="w-4 h-4" />,
+      badge: stats?.errors?.last_24h || 0,
+    },
+    { key: "activity", label: "Activity", icon: <Activity className="w-4 h-4" /> },
+  ];
 
   return (
-    <div className="max-w-5xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-twilight font-heading flex items-center gap-2">
-          <Shield className="w-6 h-6" />
-          Admin Dashboard
-        </h1>
-        <p className="text-sm text-charcoal/60 mt-1">Manage users, beta codes, and platform settings.</p>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-        <StatCard icon={<Users className="w-4 h-4" />} label="Total Users" value={stats.total_users} color="text-deep-sky" />
-        <StatCard icon={<FileText className="w-4 h-4" />} label="Total Responses" value={stats.total_responses} color="text-golden-hour" />
-        <StatCard icon={<Flame className="w-4 h-4" />} label="Active (7d)" value={stats.active_users_7d} color="text-sunrise-coral" />
-        <StatCard icon={<Key className="w-4 h-4" />} label="Beta Slots" value={`${totalCodeUses}/${totalCodeSlots}`} color="text-twilight" />
-      </div>
-
-      {/* Beta Codes */}
-      <Card padding="lg" className="mb-8">
-        <h2 className="text-lg font-semibold text-twilight mb-4">Beta Invite Codes</h2>
-
-        <div className="space-y-3 mb-6">
-          {stats.beta_codes.map((code) => (
-            <div key={code.id} className="flex items-center justify-between p-3 rounded-xl bg-soft-gray/50">
-              <div>
-                <code className="text-sm font-mono font-bold text-twilight">{code.code}</code>
-                <p className="text-xs text-charcoal/50 mt-0.5">
-                  {code.used_count}/{code.max_uses} used
-                </p>
+    <div className="min-h-[calc(100vh-80px)] bg-slate-900 -m-4 md:-m-8 p-4 md:p-8 rounded-2xl">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-xl font-bold text-white flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-sky-500/20 border border-sky-500/30 flex items-center justify-center">
+                <Shield className="w-4 h-4 text-sky-400" />
               </div>
-              <button
-                onClick={() => toggleCode(code.id, !code.is_active)}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                  code.is_active
-                    ? "bg-green-100 text-green-700 hover:bg-green-200"
-                    : "bg-red-100 text-red-700 hover:bg-red-200"
-                }`}
-              >
-                {code.is_active ? "Active" : "Disabled"}
-              </button>
-            </div>
+              Beta Command Center
+            </h1>
+            <p className="text-xs text-slate-500 mt-1 font-body">
+              Wisdom Journal -- Last refreshed {lastRefresh.toLocaleTimeString()}
+            </p>
+          </div>
+          <button
+            onClick={fetchStats}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800/50 border border-white/10 text-sm text-slate-300 hover:text-white hover:border-white/20 transition-all disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="flex gap-1 mb-6 p-1.5 bg-slate-800/30 rounded-2xl border border-white/5 overflow-x-auto scrollbar-hide">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                activeTab === tab.key
+                  ? "bg-slate-700/50 text-white border border-white/10 shadow-lg"
+                  : "text-slate-500 hover:text-slate-300 hover:bg-white/[0.03]"
+              }`}
+            >
+              {tab.icon}
+              <span className="hidden sm:inline">{tab.label}</span>
+              {tab.badge !== undefined && tab.badge > 0 && (
+                <CountBadge
+                  count={tab.badge}
+                  color={
+                    tab.key === "errors" ? "bg-red-500" :
+                    tab.key === "feedback" ? "bg-amber-500" :
+                    "bg-slate-600"
+                  }
+                />
+              )}
+            </button>
           ))}
         </div>
 
-        <div className="flex gap-2">
-          <Input
-            placeholder="NEW-CODE-NAME"
-            value={newCode}
-            onChange={(e) => setNewCode(e.target.value.toUpperCase())}
-            className="flex-1"
-          />
-          <Input
-            type="number"
-            placeholder="Max uses"
-            value={newCodeMax}
-            onChange={(e) => setNewCodeMax(e.target.value)}
-            className="w-24"
-          />
-          <Button onClick={createCode} disabled={creating || !newCode.trim()} size="md">
-            <Plus className="w-4 h-4 mr-1" />
-            Create
-          </Button>
-        </div>
-      </Card>
-
-      {/* Beta Feedback */}
-      <Card padding="lg" className="mb-8">
-        <h2 className="text-lg font-semibold text-twilight mb-1">
-          Beta Feedback
-          {stats.feedback.filter((f) => f.status === "new").length > 0 && (
-            <span className="ml-2 text-xs font-semibold text-white bg-sunrise-coral px-2 py-0.5 rounded-full align-middle">
-              {stats.feedback.filter((f) => f.status === "new").length} new
-            </span>
-          )}
-        </h2>
-        <p className="text-xs text-charcoal/50 mb-4">
-          What testers are reporting from the in-app feedback button.
-        </p>
-
-        {stats.feedback.length === 0 ? (
-          <p className="text-sm text-charcoal/40 py-6 text-center">
-            No feedback yet. It will appear here as testers use the feedback button.
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {stats.feedback.map((f) => {
-              const TypeIcon =
-                f.type === "bug" ? Bug : f.type === "idea" ? Lightbulb : f.type === "praise" ? Heart : MessageCircle;
-              return (
-                <div key={f.id} className={`p-3 rounded-xl border ${f.status === "new" ? "border-deep-sky/20 bg-deep-sky/[0.03]" : "border-charcoal/[0.06] bg-soft-gray/40"}`}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-2.5 min-w-0">
-                      <TypeIcon className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
-                        f.type === "bug" ? "text-error" : f.type === "idea" ? "text-golden-hour" : f.type === "praise" ? "text-sunrise-coral" : "text-charcoal/50"
-                      }`} />
-                      <div className="min-w-0">
-                        <p className="text-sm text-charcoal whitespace-pre-wrap break-words">{f.message}</p>
-                        <p className="text-[11px] text-charcoal/40 mt-1.5">
-                          {f.profile?.full_name || f.profile?.email || "Unknown user"}
-                          {f.page_url && <> · <code>{f.page_url}</code></>}
-                          {" · "}
-                          {new Date(f.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                        </p>
-                      </div>
-                    </div>
-                    <select
-                      value={f.status}
-                      onChange={(e) => setFeedbackStatus(f.id, e.target.value as FeedbackItem["status"])}
-                      className={`text-xs rounded-lg border px-2 py-1 flex-shrink-0 ${
-                        f.status === "new"
-                          ? "border-deep-sky/30 text-deep-sky"
-                          : f.status === "reviewed"
-                            ? "border-golden-hour/40 text-golden-hour"
-                            : "border-success/40 text-success"
-                      }`}
-                    >
-                      <option value="new">New</option>
-                      <option value="reviewed">Reviewed</option>
-                      <option value="resolved">Resolved</option>
-                    </select>
-                  </div>
-                </div>
-              );
-            })}
+        {/* Loading State */}
+        {loading && !stats && (
+          <div className="space-y-6">
+            <SkeletonGrid count={4} />
+            <SkeletonGrid count={3} />
+            <SkeletonList count={5} />
           </div>
         )}
-      </Card>
 
-      {/* Users */}
-      <Card padding="lg">
-        <h2 className="text-lg font-semibold text-twilight mb-4">Users ({stats.recent_users.length})</h2>
+        {/* Error State */}
+        {!loading && !stats && (
+          <div className="bg-slate-800/50 backdrop-blur-sm border border-red-500/20 rounded-2xl p-8 text-center">
+            <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-3" />
+            <p className="text-white font-medium">Failed to load admin data</p>
+            <p className="text-sm text-slate-400 mt-1">Check your connection and try again.</p>
+            <button
+              onClick={fetchStats}
+              className="mt-4 px-6 py-2 rounded-xl bg-sky-500 text-white text-sm hover:bg-sky-400 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        )}
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-soft-gray text-left text-xs text-charcoal/50 uppercase tracking-wider">
-                <th className="pb-3 pr-4">User</th>
-                <th className="pb-3 pr-4">Responses</th>
-                <th className="pb-3 pr-4">Streak</th>
-                <th className="pb-3 pr-4">Code</th>
-                <th className="pb-3 pr-4">Joined</th>
-                <th className="pb-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stats.recent_users.map((u) => (
-                <tr key={u.id} className="border-b border-soft-gray/50">
-                  <td className="py-3 pr-4">
-                    <p className="font-medium text-charcoal truncate max-w-[200px]">
-                      {u.full_name || "No name"}
-                      {u.is_admin && <span className="ml-1 text-xs text-deep-sky">(admin)</span>}
-                    </p>
-                    <p className="text-xs text-charcoal/50">{u.email}</p>
-                  </td>
-                  <td className="py-3 pr-4 text-charcoal/70">{u.total_responses}</td>
-                  <td className="py-3 pr-4">
-                    {u.current_streak > 0 ? (
-                      <span className="text-golden-hour font-medium">{u.current_streak}d</span>
-                    ) : (
-                      <span className="text-charcoal/30">0</span>
-                    )}
-                  </td>
-                  <td className="py-3 pr-4">
-                    <code className="text-xs text-charcoal/50">{u.beta_code_used || "n/a"}</code>
-                  </td>
-                  <td className="py-3 pr-4 text-xs text-charcoal/50">
-                    {new Date(u.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                  </td>
-                  <td className="py-3">
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => toggleAdmin(u.id, !u.is_admin)}
-                        className={`p-1.5 rounded-lg text-xs transition-colors ${
-                          u.is_admin ? "bg-deep-sky/10 text-deep-sky" : "bg-soft-gray text-charcoal/40 hover:text-charcoal"
-                        }`}
-                        title={u.is_admin ? "Remove admin" : "Make admin"}
-                      >
-                        <Shield className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => markDeceased(u.id, true)}
-                        className="p-1.5 rounded-lg bg-soft-gray text-charcoal/40 hover:text-sunrise-coral text-xs transition-colors"
-                        title="Activate legacy mode"
-                      >
-                        <UserX className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string | number; color: string }) {
-  return (
-    <Card padding="md">
-      <div className="flex items-center gap-2 mb-1">
-        <span className={color}>{icon}</span>
-        <span className="text-xs text-charcoal/50 font-body">{label}</span>
+        {/* Tab Content */}
+        {stats && (
+          <div>
+            {activeTab === "overview" && (
+              <OverviewTab stats={stats} onQuickAction={handleQuickAction} />
+            )}
+            {activeTab === "users" && (
+              <UsersTab stats={stats} onRefresh={fetchStats} />
+            )}
+            {activeTab === "beta" && (
+              <BetaTab stats={stats} onRefresh={fetchStats} />
+            )}
+            {activeTab === "feedback" && (
+              <FeedbackTab />
+            )}
+            {activeTab === "errors" && (
+              <ErrorsTab />
+            )}
+            {activeTab === "activity" && (
+              <ActivityTab />
+            )}
+          </div>
+        )}
       </div>
-      <p className={`text-xl font-bold ${color}`}>{value}</p>
-    </Card>
+    </div>
   );
 }

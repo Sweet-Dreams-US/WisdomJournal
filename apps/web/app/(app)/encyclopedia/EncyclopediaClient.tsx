@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import Card from "@/components/ui/Card";
 import type { KnowledgeWebData } from "@/lib/data/get-knowledge-web";
+import type { CategoryTrend } from "@/lib/data/get-category-trends";
 import type { UserProfile, EncyclopediaStats, CategoryBreakdown } from "@wisdom-journal/shared";
 import { getCategoryStyle } from "@/lib/category-utils";
 import StreakFlame from "@/components/visualizations/StreakFlame";
@@ -120,9 +121,10 @@ interface Props {
   webData: KnowledgeWebData | null;
   profile: UserProfile | null;
   stats: EncyclopediaStats | null;
+  categoryTrends?: CategoryTrend[];
 }
 
-export default function EncyclopediaClient({ webData, profile, stats }: Props) {
+export default function EncyclopediaClient({ webData, profile, stats, categoryTrends = [] }: Props) {
   const [activeTab, setActiveTab] = useState<"web" | "radar" | "categories">("web");
 
   const displayName = profile?.full_name?.split(" ")[0] ?? "Your";
@@ -300,15 +302,18 @@ export default function EncyclopediaClient({ webData, profile, stats }: Props) {
         <div className="grid gap-3 animate-fade-in-up">
           {stats.category_breakdown
             .sort((a, b) => b.response_count - a.response_count)
-            .map((cat, i) => (
-              <div
-                key={cat.category_id}
-                className="animate-stagger-in"
-                style={{ animationDelay: `${i * 0.05}s` }}
-              >
-                <CategoryRow category={cat} maxResponses={stats.total_responses} />
-              </div>
-            ))}
+            .map((cat, i) => {
+              const trend = categoryTrends.find((t) => t.category_id === cat.category_id);
+              return (
+                <div
+                  key={cat.category_id}
+                  className="animate-stagger-in"
+                  style={{ animationDelay: `${i * 0.05}s` }}
+                >
+                  <CategoryRow category={cat} maxResponses={stats.total_responses} trend={trend} />
+                </div>
+              );
+            })}
           {stats.category_breakdown.length === 0 && (
             <Card padding="lg" className="text-center">
               <p className="text-charcoal/50 font-body text-sm">
@@ -329,12 +334,56 @@ interface CategoryInsight {
   response_count?: number;
 }
 
+function TrendIndicator({ trend }: { trend?: CategoryTrend }) {
+  if (!trend) return null;
+
+  const { recent_count, previous_count } = trend;
+
+  // If both are zero, no trend to show
+  if (recent_count === 0 && previous_count === 0) return null;
+
+  let arrow: string;
+  let colorClass: string;
+  let pctChange: number;
+
+  if (previous_count === 0 && recent_count > 0) {
+    arrow = "\u2191";
+    colorClass = "text-success";
+    pctChange = 100;
+  } else if (previous_count > 0) {
+    pctChange = Math.round(((recent_count - previous_count) / previous_count) * 100);
+    if (pctChange > 0) {
+      arrow = "\u2191";
+      colorClass = "text-success";
+    } else if (pctChange < 0) {
+      arrow = "\u2193";
+      colorClass = "text-error";
+      pctChange = Math.abs(pctChange);
+    } else {
+      arrow = "\u2192";
+      colorClass = "text-charcoal/40";
+    }
+  } else {
+    arrow = "\u2193";
+    colorClass = "text-error";
+    pctChange = 100;
+  }
+
+  return (
+    <span className={`text-xs font-medium ${colorClass}`} title="30-day trend vs previous 30 days">
+      {arrow} {pctChange}%
+    </span>
+  );
+}
+
 function CategoryRow({
   category,
   maxResponses,
+  trend,
 }: {
   category: CategoryBreakdown;
   maxResponses: number;
+  trend?: CategoryTrend;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [insight, setInsight] = useState<CategoryInsight | null>(null);
@@ -400,6 +449,7 @@ function CategoryRow({
                   {category.response_count} response{category.response_count !== 1 ? "s" : ""} ·{" "}
                   {category.word_count.toLocaleString()} words
                 </span>
+                <TrendIndicator trend={trend} />
                 <ChevronDown
                   className={`w-4 h-4 text-charcoal/30 transition-transform duration-300 ${expanded ? "rotate-180" : ""}`}
                 />

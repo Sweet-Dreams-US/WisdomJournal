@@ -1,13 +1,33 @@
 import { Suspense } from "react";
+import { createClient } from "@/lib/supabase/server";
 import { getResponses } from "@/lib/data/get-responses";
 import JournalClient from "./JournalClient";
 
 export default async function JournalPage() {
-  const responses = await getResponses();
+  const supabase = createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Get initial 20 responses
+  const responses = await getResponses({ limit: 20, offset: 0 });
+
+  // Get total count for pagination
+  let totalCount = responses.length;
+  if (user) {
+    const { count } = await supabase
+      .from("responses")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .is("deleted_at", null);
+
+    totalCount = count ?? responses.length;
+  }
 
   return (
     <Suspense fallback={<JournalSkeleton />}>
-      <JournalClient initialResponses={responses} />
+      <JournalClient initialResponses={responses} initialTotal={totalCount} />
     </Suspense>
   );
 }

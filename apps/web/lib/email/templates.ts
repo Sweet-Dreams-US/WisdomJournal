@@ -151,3 +151,120 @@ export function groupInviteEmail(
     `),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Weekly Digest Email
+// ---------------------------------------------------------------------------
+
+interface WeeklyDigestData {
+  responsesCount: number;
+  totalWords: number;
+  currentStreak: number;
+  categoriesCovered: string[];
+  topCategory: string | null;
+  newAchievements: string[];
+  dateRange: string; // e.g. "Mar 10 – Mar 16, 2025"
+}
+
+const statBoxStyle = `
+  display: inline-block;
+  text-align: center;
+  padding: 16px 12px;
+  min-width: 100px;
+`;
+
+const statValueStyle = `
+  font-size: 28px;
+  font-weight: 700;
+  color: #1A1A3E;
+  line-height: 1.2;
+`;
+
+const statLabelStyle = `
+  font-size: 12px;
+  color: #2D2D2D99;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+`;
+
+function getMotivationalMessage(responsesCount: number): string {
+  if (responsesCount === 0) {
+    return "This week was quiet, and that is okay. Even small moments of reflection count. Try answering just one question this week.";
+  }
+  if (responsesCount <= 2) {
+    return "You made time to reflect this week. Even a few entries build the habit of self awareness. Keep showing up.";
+  }
+  if (responsesCount <= 5) {
+    return "Great week of journaling! You are building a meaningful record of your thoughts and growth. Keep the momentum going.";
+  }
+  return "What an incredible week! Your dedication to reflection is inspiring. The wisdom you are capturing will be valuable for years to come.";
+}
+
+export function weeklyDigestEmail(
+  userName: string,
+  data: WeeklyDigestData
+): { subject: string; html: string } {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://wisdomjournal.app";
+
+  const themesHtml =
+    data.categoriesCovered.length > 0
+      ? `
+      <div style="margin: 24px 0;">
+        <h3 style="font-size:14px; color:#1A1A3E; margin-bottom:12px;">This Week's Themes</h3>
+        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+          ${data.categoriesCovered
+            .map(
+              (cat) =>
+                `<span style="display:inline-block; padding:4px 12px; background:#E8F0FE; color:#4A90D9; border-radius:16px; font-size:13px; font-weight:500;">${cat}</span>`
+            )
+            .join("")}
+        </div>
+        ${data.topCategory ? `<p style="font-size:13px; color:#2D2D2D99; margin-top:8px;">Top category: <strong style="color:#1A1A3E;">${data.topCategory}</strong></p>` : ""}
+      </div>`
+      : "";
+
+  const achievementsHtml =
+    data.newAchievements.length > 0
+      ? `
+      <div style="margin: 24px 0; padding: 16px; background: #FFF8E1; border-radius: 8px;">
+        <h3 style="font-size:14px; color:#1A1A3E; margin:0 0 8px 0;">New Achievements Earned</h3>
+        ${data.newAchievements.map((a) => `<p style="margin:4px 0; font-size:14px;">&#127942; ${a}</p>`).join("")}
+      </div>`
+      : "";
+
+  return {
+    subject: `Your Week in Wisdom \u2014 ${data.dateRange}`,
+    html: wrap(`
+      <p style="font-size:16px;">Hi ${userName},</p>
+      <p>Here is your weekly reflection summary for <strong>${data.dateRange}</strong>.</p>
+
+      <!-- Stats row -->
+      <div style="text-align:center; margin:28px 0; padding:20px 0; background:#F8F9FA; border-radius:12px;">
+        <div style="${statBoxStyle}">
+          <div style="${statValueStyle}">${data.responsesCount}</div>
+          <div style="${statLabelStyle}">Responses</div>
+        </div>
+        <div style="${statBoxStyle}">
+          <div style="${statValueStyle}">${data.totalWords.toLocaleString()}</div>
+          <div style="${statLabelStyle}">Words</div>
+        </div>
+        <div style="${statBoxStyle}">
+          <div style="${statValueStyle}">${data.currentStreak}</div>
+          <div style="${statLabelStyle}">Day Streak</div>
+        </div>
+      </div>
+
+      ${themesHtml}
+      ${achievementsHtml}
+
+      <p style="font-size:14px; color:#2D2D2D; line-height:1.6; margin-top:20px;">
+        ${getMotivationalMessage(data.responsesCount)}
+      </p>
+
+      <div style="text-align:center; margin:28px 0;">
+        <a href="${appUrl}/dashboard" style="${buttonStyle}">Continue Your Journey</a>
+      </div>
+    `),
+  };
+}
