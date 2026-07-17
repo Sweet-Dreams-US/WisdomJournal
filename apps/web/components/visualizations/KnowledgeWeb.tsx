@@ -579,7 +579,11 @@ export default function KnowledgeWeb({ data }: Props) {
 
     return () => {
       simulation.stop();
-      gsap.killTweensOf("*");
+      // Only kill tweens on our own elements — a global "*" kill cancels
+      // sibling components' entrance tweens and freezes them mid-animation.
+      if (svgRef.current) {
+        gsap.killTweensOf(svgRef.current.querySelectorAll("*"));
+      }
     };
   }, [data, dimensions, showTooltip, hideTooltip]);
 

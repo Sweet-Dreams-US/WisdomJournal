@@ -75,11 +75,11 @@ export default function DashboardClient({
   return (
     <div className="max-w-4xl">
       {/* Greeting */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-twilight mb-2">
-          {greeting}, {firstName}!
+      <div className="mb-8 animate-fade-in">
+        <h2 className="text-2xl font-bold text-twilight mb-1.5 tracking-tight">
+          {greeting}, {firstName}
         </h2>
-        <p className="text-charcoal/60">
+        <p className="text-sm text-charcoal/50 font-medium">
           {allOriginalDone && bonusItems.length === 0
             ? "You've answered all your questions today. Want some follow-ups?"
             : allOriginalDone && bonusItems.length > 0
@@ -91,7 +91,7 @@ export default function DashboardClient({
       </div>
 
       {/* Quick stats */}
-      <div className="grid sm:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-8 animate-fade-in-up">
         <StatsCard
           value={profile.current_streak}
           label="Day Streak"
@@ -119,7 +119,7 @@ export default function DashboardClient({
       {totalQuestions > 0 && (
         <>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-twilight">
+            <h3 className="text-sm font-semibold text-charcoal/70 uppercase tracking-wider">
               Today&apos;s Questions &mdash; {answeredAll} of {totalAll}
             </h3>
             <ProgressDots total={totalAll} completed={answeredAll} />
@@ -128,55 +128,62 @@ export default function DashboardClient({
           {/* Question cards */}
           <div className="space-y-3">
             {originalItems.map((item: any, i: number) => (
-              <QuestionCard
+              <div
                 key={item.id}
-                question={item.question}
-                isAnswered={item.response_id !== null}
-                responsePreview={undefined}
-                questionNumber={i + 1}
-                categorySlug={item.question?.category?.slug}
-                categoryName={item.question?.category?.name}
-              />
+                className="animate-stagger-in"
+                style={{ animationDelay: `${i * 0.06}s` }}
+              >
+                <QuestionCard
+                  question={item.question}
+                  isAnswered={item.response_id !== null}
+                  responsePreview={undefined}
+                  questionNumber={i + 1}
+                  categorySlug={item.question?.category?.slug}
+                  categoryName={item.question?.category?.name}
+                />
+              </div>
             ))}
           </div>
 
           {/* Follow-up section */}
           {allOriginalDone && bonusItems.length === 0 && (
-            <div className="mt-6">
+            <div className="mt-6 animate-fade-in-up">
               {canGenerateFollowUps ? (
-                <Card padding="lg" className="text-center border border-golden-hour/20 bg-golden-hour/5">
-                  <Sparkles className="w-10 h-10 text-golden-hour mx-auto mb-3" />
-                  <h3 className="text-lg font-bold text-twilight mb-1">
+                <Card padding="lg" className="text-center border border-golden-hour/15 bg-gradient-to-br from-golden-hour/[0.04] to-transparent">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-golden-hour/20 to-golden-hour/5 flex items-center justify-center mx-auto mb-4">
+                    <Sparkles className="w-7 h-7 text-golden-hour animate-breathe" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-twilight mb-1 tracking-tight">
                     Ready for more?
                   </h3>
-                  <p className="text-charcoal/60 text-sm mb-4">
+                  <p className="text-charcoal/50 text-sm mb-5 max-w-sm mx-auto">
                     Based on your answers today, we can generate 5 personalized follow-up questions that dig deeper.
                   </p>
                   <button
                     onClick={generateFollowUps}
                     disabled={loadingFollowUps}
-                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-golden-hour text-white font-medium hover:bg-golden-hour/90 transition-colors disabled:opacity-50"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-golden-hour to-[#e8951c] text-white font-semibold hover:shadow-glow-warm active:scale-[0.98] transition-all duration-300 disabled:opacity-50"
                   >
                     {loadingFollowUps ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <Sparkles className="w-4 h-4" />
                     )}
-                    {loadingFollowUps ? "Generating..." : "Generate Follow-up Questions"}
+                    {loadingFollowUps ? "Generating..." : "Generate Follow-ups"}
                   </button>
                   {followUpError && (
                     <p className="text-xs text-error mt-3">{followUpError}</p>
                   )}
                 </Card>
               ) : !allOriginalDone ? null : (
-                <Card padding="lg" className="text-center">
-                  <PartyPopper className="w-12 h-12 text-golden-hour mx-auto mb-3" />
-                  <h3 className="text-lg font-bold text-twilight mb-1">
+                <Card padding="lg" className="text-center animate-scale-in">
+                  <PartyPopper className="w-12 h-12 text-golden-hour mx-auto mb-3 animate-bounce-subtle" />
+                  <h3 className="text-lg font-semibold text-twilight mb-1 tracking-tight">
                     All done for today!
                   </h3>
-                  <p className="text-charcoal/60 text-sm">
+                  <p className="text-charcoal/50 text-sm">
                     Come back tomorrow for new questions. Your streak is{" "}
-                    {profile.current_streak} days strong.
+                    <span className="text-gradient-warm font-semibold">{profile.current_streak} days</span> strong.
                   </p>
                 </Card>
               )}
@@ -185,36 +192,41 @@ export default function DashboardClient({
 
           {/* Bonus questions */}
           {bonusItems.length > 0 && (
-            <div className="mt-6">
+            <div className="mt-6 animate-fade-in-up">
               <div className="flex items-center gap-2 mb-3">
-                <Sparkles className="w-4 h-4 text-golden-hour" />
-                <h3 className="text-sm font-bold text-golden-hour uppercase tracking-wider">
+                <Sparkles className="w-4 h-4 text-golden-hour animate-orbit" />
+                <h3 className="text-[11px] font-bold text-golden-hour uppercase tracking-[0.15em]">
                   Bonus Follow-up Questions
                 </h3>
               </div>
               <div className="space-y-3">
                 {bonusItems.map((item: any, i: number) => (
-                  <QuestionCard
+                  <div
                     key={item.id}
-                    question={item.question}
-                    isAnswered={item.response_id !== null}
-                    responsePreview={undefined}
-                    questionNumber={totalQuestions + i + 1}
-                    categorySlug={item.question?.category?.slug || item.question?.categories?.slug}
-                    categoryName={item.question?.category?.name || item.question?.categories?.name}
-                  />
+                    className="animate-stagger-in"
+                    style={{ animationDelay: `${i * 0.06}s` }}
+                  >
+                    <QuestionCard
+                      question={item.question}
+                      isAnswered={item.response_id !== null}
+                      responsePreview={undefined}
+                      questionNumber={totalQuestions + i + 1}
+                      categorySlug={item.question?.category?.slug || item.question?.categories?.slug}
+                      categoryName={item.question?.category?.name || item.question?.categories?.name}
+                    />
+                  </div>
                 ))}
               </div>
 
               {answeredFollowUps === bonusItems.length && (
-                <Card padding="lg" className="mt-4 text-center">
-                  <PartyPopper className="w-12 h-12 text-golden-hour mx-auto mb-3" />
-                  <h3 className="text-lg font-bold text-twilight mb-1">
+                <Card padding="lg" className="mt-4 text-center animate-scale-in">
+                  <PartyPopper className="w-12 h-12 text-golden-hour mx-auto mb-3 animate-bounce-subtle" />
+                  <h3 className="text-lg font-semibold text-twilight mb-1 tracking-tight">
                     Incredible! All 10 questions answered!
                   </h3>
-                  <p className="text-charcoal/60 text-sm">
+                  <p className="text-charcoal/50 text-sm">
                     You went above and beyond today. Your streak is{" "}
-                    {profile.current_streak} days strong.
+                    <span className="text-gradient-warm font-semibold">{profile.current_streak} days</span> strong.
                   </p>
                 </Card>
               )}

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
+import { plural } from "@/lib/utils/plural";
 
 export default async function LegacyPage() {
   const supabase = createClient();
@@ -81,7 +82,7 @@ export default async function LegacyPage() {
                     {entry.relationship && (
                       <span className="capitalize">{entry.relationship} &middot; </span>
                     )}
-                    {profile.total_responses} journal entries
+                    {plural(profile.total_responses, "journal entry", "journal entries")}
                   </p>
                 </div>
               </div>

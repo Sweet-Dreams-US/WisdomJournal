@@ -11,6 +11,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import TrustColorBadge from "@/components/ui/TrustColorBadge";
 import type { UserProfile, GroupType } from "@wisdom-journal/shared";
 import type { GroupWithMembership } from "@/lib/data/get-groups";
+import { plural } from "@/lib/utils/plural";
 
 const typeIcons: Record<GroupType, typeof Globe> = {
   private: Lock,
@@ -202,7 +203,7 @@ export default function GroupsClient({ profile, groups }: GroupsClientProps) {
                         <p className="text-sm text-charcoal/60 line-clamp-1">{group.description}</p>
                       )}
                       <div className="flex items-center gap-3 mt-1 text-xs text-charcoal/40">
-                        <span>{group.member_count} members</span>
+                        <span>{plural(group.member_count, "member")}</span>
                         <span className="capitalize">{group.group_type}</span>
                         {group.membership && (
                           <span className="capitalize">{group.membership.role}</span>

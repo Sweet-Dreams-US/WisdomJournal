@@ -18,6 +18,7 @@ import Button from "@/components/ui/Button";
 import TrustColorBadge from "@/components/ui/TrustColorBadge";
 import CategoryAccessGrid from "@/components/ui/CategoryAccessGrid";
 import type { FriendDetail } from "@/lib/data/get-friend";
+import { plural } from "@/lib/utils/plural";
 
 interface Props {
   friend: FriendDetail;
@@ -123,7 +124,7 @@ export default function FriendDetailClient({ friend }: Props) {
             <div className="flex items-center gap-4 mt-2 text-xs text-charcoal/50">
               <span className="flex items-center gap-1">
                 <BookOpen className="w-3.5 h-3.5" />
-                {friend_profile.total_responses} responses
+                {plural(friend_profile.total_responses, "response")}
               </span>
               {friend_profile.current_streak > 0 && (
                 <span className="flex items-center gap-1">

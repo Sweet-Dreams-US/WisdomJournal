@@ -18,6 +18,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import TrustColorBadge from "@/components/ui/TrustColorBadge";
 import type { FriendsResult } from "@/lib/data/get-friends";
+import { plural } from "@/lib/utils/plural";
 
 type Tab = "friends" | "requests" | "search";
 
@@ -183,7 +184,7 @@ export default function FriendsClient({ friends }: { friends: FriendsResult }) {
                       </p>
                       <div className="flex items-center gap-3 text-xs text-charcoal/50 mt-0.5">
                         <span>
-                          {friend.friend_profile.total_responses} responses
+                          {plural(friend.friend_profile.total_responses, "response")}
                         </span>
                         {friend.friend_profile.current_streak > 0 && (
                           <span>
@@ -271,7 +272,7 @@ export default function FriendsClient({ friends }: { friends: FriendsResult }) {
                       </p>
                     )}
                     <p className="text-xs text-charcoal/40 mt-0.5">
-                      {f.friend_profile.total_responses} responses
+                      {plural(f.friend_profile.total_responses, "response")}
                     </p>
                   </div>
                   <div className="flex gap-2">

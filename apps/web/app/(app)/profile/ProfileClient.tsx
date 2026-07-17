@@ -22,6 +22,7 @@ import type {
   NotificationPreferences,
 } from "@wisdom-journal/shared";
 import type { GroupWithMembership } from "@/lib/data/get-groups";
+import { plural } from "@/lib/utils/plural";
 
 interface ProfileClientProps {
   profile: UserProfile;
@@ -169,7 +170,7 @@ export default function ProfileClient({
               <div key={cat.category_id}>
                 <div className="flex items-center justify-between text-xs mb-1">
                   <span className="text-charcoal/70">{cat.name}</span>
-                  <span className="text-charcoal/40">{cat.response_count} responses</span>
+                  <span className="text-charcoal/40">{plural(cat.response_count, "response")}</span>
                 </div>
                 <div className="h-2 bg-soft-gray rounded-full overflow-hidden">
                   <div
@@ -284,7 +285,7 @@ export default function ProfileClient({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-charcoal truncate">{group.name}</p>
-                <p className="text-xs text-charcoal/50">{group.member_count} members</p>
+                <p className="text-xs text-charcoal/50">{plural(group.member_count, "member")}</p>
               </div>
             </Link>
           ))}

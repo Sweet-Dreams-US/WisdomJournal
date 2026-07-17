@@ -7,6 +7,7 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import EmptyState from "@/components/ui/EmptyState";
 import type { UserProfile, WisdomQuery } from "@wisdom-journal/shared";
+import { plural } from "@/lib/utils/plural";
 
 type QueryMode = "personality" | "neutral";
 
@@ -241,7 +242,7 @@ export default function AskClient({ profile, pastQueries, friendOptions = [] }: 
 
           <div className="border-t border-soft-gray pt-4 mt-4">
             <p className="text-xs text-charcoal/50 mb-3">
-              Based on {result.source_count} responses
+              Based on {plural(result.source_count, "journal entry", "journal entries")}
             </p>
 
             {/* Sources toggle */}

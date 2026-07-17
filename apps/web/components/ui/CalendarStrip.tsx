@@ -2,15 +2,16 @@
 
 import { useRef, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { toLocalDateKey } from "@/lib/utils/dates";
 
 interface CalendarStripProps {
-  selectedDate: string; // YYYY-MM-DD
+  selectedDate: string | null; // YYYY-MM-DD, or null when no date filter
   onDateSelect: (date: string) => void;
   datesWithEntries?: Set<string>;
 }
 
 function formatDate(date: Date): string {
-  return date.toISOString().split("T")[0];
+  return toLocalDateKey(date);
 }
 
 function getDayLabel(date: Date): string {
@@ -82,11 +83,11 @@ export default function CalendarStrip({
               data-selected={isSelected}
               onClick={() => onDateSelect(dateStr)}
               className={`
-                flex flex-col items-center px-3 py-2 rounded-xl min-w-[60px]
-                transition-all duration-150 flex-shrink-0
+                flex flex-col items-center px-3 py-2 rounded-xl min-w-[56px]
+                transition-all duration-200 flex-shrink-0
                 ${isSelected
-                  ? "bg-deep-sky text-white shadow-button"
-                  : "hover:bg-soft-gray text-charcoal/70"
+                  ? "bg-gradient-to-b from-deep-sky to-sky-blue text-white shadow-button scale-105"
+                  : "hover:bg-charcoal/[0.04] text-charcoal/60"
                 }
               `}
             >

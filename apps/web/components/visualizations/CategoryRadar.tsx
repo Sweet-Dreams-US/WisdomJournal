@@ -227,7 +227,10 @@ export default function CategoryRadar({ categories, size = 400 }: Props) {
     }
 
     return () => {
-      gsap.killTweensOf("*");
+      // Scope to our own SVG — a global "*" kill cancels sibling tweens.
+      if (svgRef.current) {
+        gsap.killTweensOf(svgRef.current.querySelectorAll("*"));
+      }
     };
   }, [categories, size]);
 

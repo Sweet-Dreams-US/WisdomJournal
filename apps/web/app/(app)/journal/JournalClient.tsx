@@ -10,6 +10,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import ResponseCard from "@/components/app/ResponseCard";
 import { CATEGORIES } from "@wisdom-journal/shared";
 import type { JournalResponse } from "@wisdom-journal/shared";
+import { toLocalDateKey, todayKey } from "@/lib/utils/dates";
 
 function formatDateHeading(dateStr: string): string {
   const date = new Date(dateStr + "T00:00:00");
@@ -44,15 +45,16 @@ export default function JournalClient({ initialResponses }: JournalClientProps) 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(
     searchParams.get("category")
   );
-  const [selectedDate, setSelectedDate] = useState<string>(
-    searchParams.get("date") ?? new Date().toISOString().split("T")[0]
+  // null = no date filter (show everything)
+  const [selectedDate, setSelectedDate] = useState<string | null>(
+    searchParams.get("date")
   );
 
   // Build set of dates that have entries
   const datesWithEntries = useMemo(() => {
     const dates = new Set<string>();
     initialResponses.forEach((r) => {
-      dates.add(r.created_at.split("T")[0]);
+      dates.add(toLocalDateKey(r.created_at));
     });
     return dates;
   }, [initialResponses]);
@@ -66,6 +68,11 @@ export default function JournalClient({ initialResponses }: JournalClientProps) 
         if (primaryCategory?.slug !== selectedCategory) return false;
       }
 
+      // Date filter (from calendar strip; toggling the same day clears it)
+      if (selectedDate && toLocalDateKey(r.created_at) !== selectedDate) {
+        return false;
+      }
+
       // Text search
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
@@ -76,13 +83,13 @@ export default function JournalClient({ initialResponses }: JournalClientProps) 
 
       return true;
     });
-  }, [initialResponses, selectedCategory, searchQuery]);
+  }, [initialResponses, selectedCategory, searchQuery, selectedDate]);
 
   // Group by date
   const groupedResponses = useMemo(() => {
     const groups: Record<string, typeof filteredResponses> = {};
     filteredResponses.forEach((r) => {
-      const date = r.created_at.split("T")[0];
+      const date = toLocalDateKey(r.created_at);
       if (!groups[date]) groups[date] = [];
       groups[date].push(r);
     });
@@ -104,11 +111,11 @@ export default function JournalClient({ initialResponses }: JournalClientProps) 
 
   return (
     <div className="max-w-4xl">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-twilight mb-2">
+      <div className="mb-6 animate-fade-in">
+        <h2 className="text-2xl font-bold text-twilight mb-1.5 tracking-tight">
           Your Wisdom Journal
         </h2>
-        <p className="text-charcoal/60">
+        <p className="text-sm text-charcoal/50 font-medium">
           Browse and revisit your past responses.
         </p>
       </div>
@@ -118,8 +125,9 @@ export default function JournalClient({ initialResponses }: JournalClientProps) 
         <CalendarStrip
           selectedDate={selectedDate}
           onDateSelect={(date) => {
-            setSelectedDate(date);
-            updateParams("date", date);
+            const next = date === selectedDate ? null : date;
+            setSelectedDate(next);
+            updateParams("date", next);
           }}
           datesWithEntries={datesWithEntries}
         />

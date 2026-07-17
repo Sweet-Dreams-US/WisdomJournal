@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import { plural } from "@/lib/utils/plural";
 
 interface LegacyWisdomClientProps {
   targetProfile: {
@@ -120,7 +121,7 @@ export default function LegacyWisdomClient({
         )}
         <p className="text-xs text-charcoal/40">
           Member since {memberSince} &middot;{" "}
-          {targetProfile.total_responses} journal entries
+          {plural(targetProfile.total_responses, "journal entry", "journal entries")}
         </p>
       </div>
 

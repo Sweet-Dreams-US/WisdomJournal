@@ -15,48 +15,52 @@ export default function StreakFlame({ currentStreak, longestStreak }: Props) {
   useEffect(() => {
     if (!flameRef.current) return;
 
-    const flames = flameRef.current.querySelectorAll(".flame-layer");
-    const particles = flameRef.current.querySelectorAll(".spark");
+    // gsap.context scopes every tween created inside to this component, so
+    // cleanup reverts only our own animations. A global
+    // gsap.killTweensOf("*") here used to cancel the StrictMode remount's
+    // `from(opacity: 0)` mid-flight, leaving the whole card invisible.
+    const ctx = gsap.context(() => {
+      const flames = flameRef.current!.querySelectorAll(".flame-layer");
+      const particles = flameRef.current!.querySelectorAll(".spark");
 
-    // Flame breathing
-    flames.forEach((flame, i) => {
-      gsap.to(flame, {
-        scaleY: gsap.utils.random(0.9, 1.1),
-        scaleX: gsap.utils.random(0.95, 1.05),
-        duration: gsap.utils.random(0.6, 1.2),
-        repeat: -1,
-        yoyo: true,
-        ease: "sine.inOut",
-        delay: i * 0.15,
-        transformOrigin: "center bottom",
+      // Flame breathing
+      flames.forEach((flame, i) => {
+        gsap.to(flame, {
+          scaleY: gsap.utils.random(0.9, 1.1),
+          scaleX: gsap.utils.random(0.95, 1.05),
+          duration: gsap.utils.random(0.6, 1.2),
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut",
+          delay: i * 0.15,
+          transformOrigin: "center bottom",
+        });
       });
-    });
 
-    // Sparks float up
-    particles.forEach((spark) => {
-      gsap.to(spark, {
-        y: gsap.utils.random(-40, -80),
-        x: gsap.utils.random(-20, 20),
+      // Sparks float up
+      particles.forEach((spark) => {
+        gsap.to(spark, {
+          y: gsap.utils.random(-40, -80),
+          x: gsap.utils.random(-20, 20),
+          opacity: 0,
+          scale: 0,
+          duration: gsap.utils.random(1, 2.5),
+          repeat: -1,
+          ease: "power1.out",
+          delay: gsap.utils.random(0, 3),
+        });
+      });
+
+      // Entrance animation
+      gsap.from(containerRef.current, {
         opacity: 0,
-        scale: 0,
-        duration: gsap.utils.random(1, 2.5),
-        repeat: -1,
-        ease: "power1.out",
-        delay: gsap.utils.random(0, 3),
+        y: 20,
+        duration: 0.6,
+        ease: "power2.out",
       });
-    });
+    }, containerRef);
 
-    // Entrance animation
-    gsap.from(containerRef.current, {
-      opacity: 0,
-      y: 20,
-      duration: 0.6,
-      ease: "power2.out",
-    });
-
-    return () => {
-      gsap.killTweensOf("*");
-    };
+    return () => ctx.revert();
   }, []);
 
   // Flame intensity based on streak length
@@ -106,16 +110,16 @@ export default function StreakFlame({ currentStreak, longestStreak }: Props) {
           opacity={0.9}
         />
 
-        {/* Sparks */}
+        {/* Sparks — deterministic positions so server and client HTML match */}
         {Array.from({ length: 6 }).map((_, i) => (
           <circle
             key={i}
             className="spark"
-            cx={45 + Math.random() * 10}
-            cy={90 - Math.random() * 20}
-            r={1 + Math.random()}
+            cx={45 + ((i * 37) % 11)}
+            cy={90 - ((i * 23) % 19)}
+            r={1 + ((i * 13) % 10) / 10}
             fill={innerColor}
-            opacity={0.6 + Math.random() * 0.4}
+            opacity={0.6 + ((i * 17) % 10) / 25}
           />
         ))}
       </svg>
