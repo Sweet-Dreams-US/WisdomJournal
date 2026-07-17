@@ -82,13 +82,13 @@ export default function Footer() {
             </div>
 
             <div className="flex items-center gap-6">
-              <a href="#" className="font-body text-xs text-white/30 hover:text-white/60 transition-colors">
+              <Link href="/privacy" className="font-body text-xs text-white/30 hover:text-white/60 transition-colors">
                 Privacy
-              </a>
-              <a href="#" className="font-body text-xs text-white/30 hover:text-white/60 transition-colors">
+              </Link>
+              <Link href="/terms" className="font-body text-xs text-white/30 hover:text-white/60 transition-colors">
                 Terms
-              </a>
-              <a href="#" className="font-body text-xs text-white/30 hover:text-white/60 transition-colors">
+              </Link>
+              <a href="mailto:cole@marcuccilli.com" className="font-body text-xs text-white/30 hover:text-white/60 transition-colors">
                 Contact
               </a>
             </div>
