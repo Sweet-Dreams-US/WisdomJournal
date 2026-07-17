@@ -87,7 +87,7 @@ export async function getFriendWisdom(
     .select(
       `
       id, response_text, word_count, input_method, is_favorite, created_at,
-      question:questions(id, question_text)
+      question:questions(id, question_text:text)
     `
     )
     .in("id", responseIds)
