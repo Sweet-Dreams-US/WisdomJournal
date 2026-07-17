@@ -12,6 +12,7 @@ const pageTitles: Record<string, { title: string; subtitle?: string }> = {
   "/ask": { title: "Ask Wisdom", subtitle: "Query your knowledge" },
   "/profile": { title: "Profile", subtitle: "Your identity" },
   "/groups": { title: "Groups", subtitle: "Shared wisdom circles" },
+  "/organizations": { title: "Organizations", subtitle: "Capture your team's knowledge" },
   "/activity": { title: "Activity", subtitle: "Recent happenings" },
   "/people": { title: "People", subtitle: "Mentioned connections" },
   "/favorites": { title: "Favorites", subtitle: "Saved responses" },
@@ -32,6 +33,8 @@ function getPageInfo(pathname: string): { title: string; subtitle?: string } {
     return { title: "Response", subtitle: "View your reflection" };
   if (pathname.startsWith("/groups/"))
     return { title: "Group", subtitle: "Circle details" };
+  if (pathname.startsWith("/org/"))
+    return { title: "Organization", subtitle: "Team knowledge hub" };
   if (pathname.startsWith("/friends/"))
     return { title: "Friend", subtitle: "Connection details" };
 

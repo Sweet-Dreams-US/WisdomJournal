@@ -10,6 +10,7 @@ import {
   LogOut,
   Users,
   UserPlus,
+  Building2,
   X,
   Flame,
   Globe,
@@ -47,6 +48,7 @@ const navSections: {
     heading: "Connect",
     items: [
       { label: "Groups", href: "/groups", icon: Users },
+      { label: "Organizations", href: "/organizations", icon: Building2 },
       { label: "Friends", href: "/friends", icon: UserPlus },
       { label: "People", href: "/people", icon: Users2 },
       { label: "Activity", href: "/activity", icon: Activity },
