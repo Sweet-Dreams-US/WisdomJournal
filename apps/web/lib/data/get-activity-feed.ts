@@ -50,10 +50,13 @@ export async function getActivityFeed(
   // Include self + friends
   const userIds = [user.id, ...friendIds];
 
+  // Personal events only (group_id NULL): group-scoped copies exist for
+  // group feeds and would otherwise duplicate entries here.
   const { data: events } = await admin
     .from("activity_events")
     .select("*, profile:profiles(id, full_name, avatar_url)")
     .in("user_id", userIds)
+    .is("group_id", null)
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 

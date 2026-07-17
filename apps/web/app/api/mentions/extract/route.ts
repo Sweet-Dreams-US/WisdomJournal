@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { chatCompletion } from "@/lib/ai/openrouter";
+import { parseModelJson } from "@/lib/ai/parse-json";
 
 /**
  * POST /api/mentions/extract
@@ -68,12 +69,10 @@ Return ONLY valid JSON, no markdown or explanation.`,
       relationship: string | null;
     }> = [];
 
-    try {
-      const parsed = JSON.parse(result.content);
-      if (Array.isArray(parsed)) {
-        mentions = parsed;
-      }
-    } catch {
+    const parsed = parseModelJson<typeof mentions>(result.content);
+    if (Array.isArray(parsed)) {
+      mentions = parsed;
+    } else {
       console.error("Failed to parse mentions JSON:", result.content);
       return NextResponse.json({ mentions: [] });
     }

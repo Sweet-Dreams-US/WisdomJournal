@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { embedResponse } from "@/lib/ai/embeddings";
 import { chatCompletion } from "@/lib/ai/openrouter";
+import { parseModelJson } from "@/lib/ai/parse-json";
 
 export async function POST(request: NextRequest) {
   const supabase = createClient();
@@ -141,7 +142,7 @@ Only real people, not hypothetical. Return [] if none. Return ONLY valid JSON.`,
       { maxTokens: 500, temperature: 0.1 }
     );
 
-    const parsed = JSON.parse(result.content);
+    const parsed = parseModelJson<any[]>(result.content);
     if (!Array.isArray(parsed) || parsed.length === 0) return;
 
     const rows = parsed.map(
