@@ -134,7 +134,7 @@ export default function ActivityFeedClient({ initialEvents }: Props) {
   return (
     <div className="max-w-3xl">
       <div className="mb-6 animate-fade-in">
-        <h1 className="text-2xl font-bold text-twilight tracking-tight">
+        <h1 className="display-title">
           Activity
         </h1>
         <p className="text-sm text-charcoal/50 mt-1 font-medium">

@@ -166,7 +166,7 @@ export default function JournalClient({
   return (
     <div className="max-w-4xl">
       <div className="mb-6 animate-fade-in">
-        <h2 className="text-2xl font-bold text-twilight mb-1.5 tracking-tight">
+        <h2 className="display-title mb-1.5">
           Your Wisdom Journal
         </h2>
         <p className="text-sm text-charcoal/50 font-medium">

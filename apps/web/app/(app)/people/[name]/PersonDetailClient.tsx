@@ -116,7 +116,7 @@ export default function PersonDetailClient({ person }: Props) {
         </div>
         <div className="min-w-0">
           <div className="flex items-center gap-2.5 flex-wrap">
-            <h2 className="text-2xl font-bold text-twilight tracking-tight">
+            <h2 className="display-title">
               {person.display_name}
             </h2>
             {person.relationship && (

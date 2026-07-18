@@ -132,7 +132,7 @@ export default function AchievementsClient({ data }: AchievementsClientProps) {
     <div className="max-w-4xl">
       {/* Header */}
       <div className="mb-6 animate-fade-in">
-        <h2 className="text-2xl font-bold text-twilight mb-1.5 tracking-tight">
+        <h2 className="display-title mb-1.5">
           Achievements
         </h2>
         <p className="text-sm text-charcoal/50 font-medium">
@@ -162,7 +162,7 @@ export default function AchievementsClient({ data }: AchievementsClientProps) {
             <Trophy className="w-6 h-6 text-golden-hour" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-twilight tracking-tight">
+            <p className="display-title">
               {earnedCount} of {totalCount} earned
             </p>
             <p className="text-xs text-charcoal/50 font-medium uppercase tracking-wider">

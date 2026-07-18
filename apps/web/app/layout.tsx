@@ -8,6 +8,11 @@ const fraunces = Fraunces({
   subsets: ["latin"],
   variable: "--font-heading",
   display: "swap",
+  // Full variable axes: optical size makes display sizes dramatically more
+  // characterful, SOFT rounds the letterforms toward warmth, and italics
+  // are the brand's signature accent for names and precious words.
+  style: ["normal", "italic"],
+  axes: ["opsz", "SOFT"],
 });
 
 const dmSans = DM_Sans({

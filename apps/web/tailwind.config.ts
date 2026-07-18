@@ -9,8 +9,10 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Primary palette
-        "cloud-white": "#FAFBFF",
+        // Primary palette — "paper by day, night at the rail"
+        // cloud-white warmed from cold blue-white to morning paper; the
+        // blue/gold ambient auras supply the sky, the surface supplies warmth.
+        "cloud-white": "#FBFAF7",
         "sky-blue": "#7CB9E8",
         "deep-sky": "#4A90D9",
         twilight: "#2C3E6B",
@@ -28,10 +30,13 @@ const config: Config = {
         "soft-lavender": "#E8E0F0",
         "dusty-rose": "#F0D8D8",
 
-        // Neutrals
-        "soft-gray": "#F0F2F5",
+        // Neutrals — charcoal is now true ink-navy so every existing
+        // text-charcoal/NN class shifts from anonymous gray to the brand's
+        // ink voice in one move. Hierarchy comes from 3 opacity stops
+        // (full, /65, /45), not six shades of whisper.
+        "soft-gray": "#F1F0EC",
         "warm-gray": "#9BA3AF",
-        charcoal: "#2D3748",
+        charcoal: "#26314F",
 
         // Semantic
         success: "#68D391",

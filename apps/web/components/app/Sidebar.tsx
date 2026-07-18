@@ -115,12 +115,12 @@ export default function Sidebar() {
   const sidebarContent = (
     <>
       {/* Logo */}
-      <div className="p-6 border-b border-charcoal/[0.06]">
+      <div className="p-6 border-b border-white/[0.06]">
         <Link href="/dashboard" className="flex items-center gap-2.5 group">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-deep-sky to-sky-blue flex items-center justify-center shadow-button group-hover:shadow-glow transition-shadow duration-300">
             <BookOpen className="w-5 h-5 text-white" />
           </div>
-          <span className="font-heading text-lg text-twilight">
+          <span className="font-heading text-lg text-white tracking-tight">
             Wisdom
           </span>
         </Link>
@@ -128,7 +128,7 @@ export default function Sidebar() {
 
       {/* Streak indicator */}
       {streak > 0 && (
-        <div className="mx-4 mt-4 mb-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-golden-hour/10 to-sunrise-coral/5 border border-golden-hour/15">
+        <div className="mx-4 mt-4 mb-2 px-3 py-2.5 rounded-xl bg-golden-hour/[0.08] border border-golden-hour/20">
           <span className="inline-flex items-center gap-2 text-xs text-golden-hour font-semibold">
             <Flame className="w-4 h-4 animate-breathe" />
             {streak} day streak
@@ -146,7 +146,7 @@ export default function Sidebar() {
           return (
             <div key={section.heading ?? sectionIdx} className={sectionIdx > 0 ? "mt-5" : ""}>
               {section.heading && (
-                <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-charcoal/35">
+                <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-stardust/40">
                   {section.heading}
                 </p>
               )}
@@ -166,8 +166,8 @@ export default function Sidebar() {
                           transition-all duration-200 relative
                           ${
                             isActive
-                              ? "nav-item-active [border-left:none] text-deep-sky font-semibold"
-                              : "text-charcoal/55 hover:text-charcoal hover:bg-charcoal/[0.03]"
+                              ? "nav-item-active text-white font-semibold"
+                              : "text-stardust/60 hover:text-white hover:bg-white/[0.04]"
                           }
                         `}
                       >
@@ -175,13 +175,13 @@ export default function Sidebar() {
                             scaleY transition plays as active state moves between items */}
                         <span
                           aria-hidden="true"
-                          className={`absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-deep-sky transition-transform duration-[250ms] ease-out ${
+                          className={`absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-golden-hour transition-transform duration-[250ms] ease-out ${
                             isActive ? "scale-y-100" : "scale-y-0"
                           }`}
                         />
                         <item.icon
                           className={`w-[18px] h-[18px] transition-colors ${
-                            isActive ? "text-deep-sky animate-scale-in" : ""
+                            isActive ? "text-golden-hour animate-scale-in" : ""
                           }`}
                         />
                         <span className="flex-1">{item.label}</span>
@@ -201,20 +201,20 @@ export default function Sidebar() {
       </nav>
 
       {/* Feedback + Sign out */}
-      <div className="p-3 border-t border-charcoal/[0.06] space-y-0.5">
+      <div className="p-3 border-t border-white/[0.06] space-y-0.5">
         <button
           onClick={() => {
             // Trigger the floating feedback widget
             window.dispatchEvent(new CustomEvent("open-feedback"));
           }}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-charcoal/50 hover:text-charcoal hover:bg-charcoal/[0.03] transition-all duration-200 w-full"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-stardust/55 hover:text-white hover:bg-white/[0.04] transition-all duration-200 w-full"
         >
           <MessageSquare className="w-[18px] h-[18px]" />
           Send Feedback
         </button>
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-charcoal/50 hover:text-charcoal hover:bg-charcoal/[0.03] transition-all duration-200 w-full"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-stardust/55 hover:text-white hover:bg-white/[0.04] transition-all duration-200 w-full"
         >
           <LogOut className="w-[18px] h-[18px]" />
           Sign Out
@@ -226,7 +226,7 @@ export default function Sidebar() {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-64 sidebar-gradient border-r border-charcoal/[0.06] flex-col z-30">
+      <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-64 sidebar-gradient border-r border-white/[0.06] flex-col z-30">
         {sidebarContent}
       </aside>
 
@@ -241,16 +241,16 @@ export default function Sidebar() {
       {/* Mobile drawer */}
       <aside
         className={`
-          fixed left-0 top-0 bottom-0 w-64 sidebar-gradient border-r border-charcoal/[0.06] flex flex-col z-50
+          fixed left-0 top-0 bottom-0 w-64 sidebar-gradient border-r border-white/[0.06] flex flex-col z-50
           md:hidden transition-transform duration-300 ease-out
           ${isOpen ? "translate-x-0" : "-translate-x-full"}
         `}
       >
         <button
           onClick={close}
-          className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-charcoal/5 transition-colors"
+          className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-white/10 transition-colors"
         >
-          <X className="w-5 h-5 text-charcoal/40" />
+          <X className="w-5 h-5 text-stardust/50" />
         </button>
         {sidebarContent}
       </aside>

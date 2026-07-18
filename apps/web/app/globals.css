@@ -9,19 +9,49 @@
 
   body {
     @apply font-body text-charcoal bg-cloud-white antialiased;
-    font-weight: 400;
-    letter-spacing: -0.01em;
+    font-weight: 430;
+    letter-spacing: -0.008em;
+    line-height: 1.6;
   }
 
   h1, h2, h3 {
-    @apply font-heading;
-    font-weight: 520;
-    letter-spacing: -0.015em;
+    @apply font-heading text-twilight;
+    font-weight: 540;
+    letter-spacing: -0.018em;
+    line-height: 1.15;
     font-optical-sizing: auto;
   }
 
   h4, h5, h6 {
-    @apply font-body font-semibold;
+    @apply font-body font-semibold text-twilight;
+    letter-spacing: -0.01em;
+  }
+
+  /* The brand's typographic signature: precious words (names, "wisdom",
+     memory titles) get the Fraunces italic voice. */
+  .accent-serif {
+    @apply font-heading italic;
+    font-weight: 480;
+    letter-spacing: -0.01em;
+  }
+
+  /* Display treatment for page-level greetings and heroes inside the app. */
+  .display-title {
+    @apply font-heading text-twilight;
+    font-size: clamp(1.75rem, 1.4rem + 1.2vw, 2.375rem);
+    font-weight: 560;
+    letter-spacing: -0.022em;
+    line-height: 1.1;
+    font-optical-sizing: auto;
+  }
+
+  /* Quiet, consistent section label — replaces scattered uppercase styles. */
+  .section-label {
+    @apply font-body text-charcoal/45;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
   }
 
   /* Respect reduced motion preferences */
@@ -174,14 +204,18 @@
     pointer-events: none;
   }
 
-  /* ─────────────── Sidebar ─────────────── */
+  /* ─────────────── Sidebar: the night rail ───────────────
+     The app's signature surface — the night sky holds the day. A deep
+     navy rail beside the warm paper canvas, with faint sky/gold auras. */
   .sidebar-gradient {
-    background: linear-gradient(180deg, #ffffff 0%, #FAFBFF 50%, #F5F7FA 100%);
+    background:
+      radial-gradient(120% 40% at 50% 0%, rgba(124, 185, 232, 0.10) 0%, transparent 60%),
+      radial-gradient(120% 35% at 50% 100%, rgba(245, 166, 35, 0.07) 0%, transparent 60%),
+      linear-gradient(180deg, #0d1428 0%, #111b33 55%, #0b1224 100%);
   }
 
   .nav-item-active {
-    background: linear-gradient(135deg, rgba(74, 144, 217, 0.1) 0%, rgba(124, 185, 232, 0.05) 100%);
-    border-left: 3px solid #4A90D9;
+    background: rgba(255, 255, 255, 0.06);
   }
 
   /* ─────────────── Landing animations ─────────────── */

@@ -159,7 +159,7 @@ export default function EncyclopediaClient({
     <div className="max-w-5xl">
       {/* Header */}
       <div className="mb-8 animate-fade-in">
-        <h1 className="text-2xl font-bold text-twilight tracking-tight">
+        <h1 className="display-title">
           {displayName}&apos;s Encyclopedia
         </h1>
         <p className="text-sm text-charcoal/50 mt-1 font-medium">
@@ -187,7 +187,7 @@ export default function EncyclopediaClient({
                 </div>
                 <TrendingUp className="w-3.5 h-3.5 text-success/50 animate-bounce-subtle" />
               </div>
-              <p className="text-2xl font-bold text-twilight tracking-tight">
+              <p className="display-title">
                 <AnimatedNumber value={stats.total_responses} />
               </p>
               <p className="text-[11px] text-charcoal/40 font-semibold uppercase tracking-wider mt-0.5">
@@ -205,7 +205,7 @@ export default function EncyclopediaClient({
                 </div>
                 <Zap className="w-3.5 h-3.5 text-golden-hour/40 animate-orbit" />
               </div>
-              <p className="text-2xl font-bold text-twilight tracking-tight">
+              <p className="display-title">
                 <AnimatedNumber value={stats.total_word_count} duration={1800} />
               </p>
               <p className="text-[11px] text-charcoal/40 font-semibold uppercase tracking-wider mt-0.5">
@@ -243,7 +243,7 @@ export default function EncyclopediaClient({
                   ~{avgWordsPerResponse}w/r
                 </span>
               </div>
-              <p className="text-2xl font-bold text-twilight tracking-tight">
+              <p className="display-title">
                 <AnimatedNumber value={stats.total_queries_received} />
               </p>
               <p className="text-[11px] text-charcoal/40 font-semibold uppercase tracking-wider mt-0.5">

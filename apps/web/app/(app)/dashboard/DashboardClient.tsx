@@ -122,8 +122,8 @@ export default function DashboardClient({
         {/* Greeting */}
         <div className="mb-8 animate-fade-in flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-twilight mb-1.5 tracking-tight">
-              {greeting}, {firstName}
+            <h2 className="display-title mb-1.5">
+              {greeting}, <span className="accent-serif text-golden-hour" style={{ fontSize: "1.06em" }}>{firstName}</span>
             </h2>
             <p className="text-sm text-charcoal/50 font-medium">
               {allOriginalDone && bonusItems.length === 0
@@ -168,7 +168,7 @@ export default function DashboardClient({
       {totalQuestions > 0 && (
         <>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-charcoal/70 uppercase tracking-wider">
+            <h3 className="section-label">
               Today&apos;s Questions &mdash; {answeredAll} of {totalAll}
             </h3>
             <ProgressDots total={totalAll} completed={answeredAll} />
