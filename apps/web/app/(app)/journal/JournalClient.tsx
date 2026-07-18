@@ -222,6 +222,7 @@ export default function JournalClient({
       {/* Response list */}
       {groupedResponses.length === 0 ? (
         <EmptyState
+          illustration="book"
           icon={BookOpen}
           title="No Entries Yet"
           description={

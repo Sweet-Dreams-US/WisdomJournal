@@ -170,6 +170,7 @@ export default function GroupsClient({ profile, groups }: GroupsClientProps) {
       {/* Groups list */}
       {groups.length === 0 ? (
         <EmptyState
+          illustration="lantern"
           icon={Users}
           title="No Groups Yet"
           description="Create a group to share your wisdom with family, friends, or communities."

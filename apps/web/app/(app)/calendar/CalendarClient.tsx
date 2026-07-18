@@ -364,6 +364,7 @@ export default function CalendarClient({
       {/* First-run empty state */}
       {entries.length === 0 && (
         <EmptyState
+          illustration="book"
           icon={BookOpen}
           title="Nothing on the Calendar Yet"
           description="Answer your daily questions and each day you write will light up here, building a month-by-month picture of your wisdom."
