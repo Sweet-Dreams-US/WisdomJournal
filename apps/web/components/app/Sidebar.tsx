@@ -130,7 +130,7 @@ export default function Sidebar() {
       {streak > 0 && (
         <div className="mx-4 mt-4 mb-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-golden-hour/10 to-sunrise-coral/5 border border-golden-hour/15">
           <span className="inline-flex items-center gap-2 text-xs text-golden-hour font-semibold">
-            <Flame className="w-4 h-4" />
+            <Flame className="w-4 h-4 animate-breathe" />
             {streak} day streak
           </span>
         </div>
@@ -166,14 +166,22 @@ export default function Sidebar() {
                           transition-all duration-200 relative
                           ${
                             isActive
-                              ? "nav-item-active text-deep-sky font-semibold"
+                              ? "nav-item-active [border-left:none] text-deep-sky font-semibold"
                               : "text-charcoal/55 hover:text-charcoal hover:bg-charcoal/[0.03]"
                           }
                         `}
                       >
+                        {/* Sliding active indicator: persists in every link so the
+                            scaleY transition plays as active state moves between items */}
+                        <span
+                          aria-hidden="true"
+                          className={`absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-deep-sky transition-transform duration-[250ms] ease-out ${
+                            isActive ? "scale-y-100" : "scale-y-0"
+                          }`}
+                        />
                         <item.icon
                           className={`w-[18px] h-[18px] transition-colors ${
-                            isActive ? "text-deep-sky" : ""
+                            isActive ? "text-deep-sky animate-scale-in" : ""
                           }`}
                         />
                         <span className="flex-1">{item.label}</span>

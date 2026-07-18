@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Flame, BookOpen, Sun, PartyPopper, Sparkles, Loader2, History } from "lucide-react";
 import StatsCard from "@/components/ui/StatsCard";
 import ProgressDots from "@/components/ui/ProgressDots";
 import QuestionCard from "@/components/app/QuestionCard";
 import MemoryCard from "@/components/app/MemoryCard";
 import Card from "@/components/ui/Card";
+import WeekStrip from "@/components/visualizations/WeekStrip";
 import type { UserProfile, DailyQuestionSet } from "@wisdom-journal/shared";
 import type { Memory } from "@/lib/data/get-memories";
+import type { DayActivity } from "@/lib/data/get-week-activity";
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -17,19 +19,47 @@ function getGreeting(): string {
   return "Good evening";
 }
 
+type DayPart = "dawn" | "day" | "evening" | "night";
+
+function getDayPart(hour: number): DayPart {
+  if (hour >= 5 && hour < 11) return "dawn";
+  if (hour >= 11 && hour < 17) return "day";
+  if (hour >= 17 && hour < 22) return "evening";
+  return "night";
+}
+
+/** Very subtle horizontal ambient wash behind greeting + stats (5-8% tints). */
+const AMBIENT_WASH: Record<DayPart, string> = {
+  dawn: "linear-gradient(100deg, rgba(245, 166, 35, 0.07) 0%, rgba(248, 232, 208, 0.06) 45%, rgba(248, 232, 208, 0) 85%)",
+  day: "linear-gradient(100deg, rgba(124, 185, 232, 0.08) 0%, rgba(74, 144, 217, 0.05) 50%, rgba(124, 185, 232, 0) 85%)",
+  evening:
+    "linear-gradient(100deg, rgba(255, 126, 107, 0.06) 0%, rgba(232, 224, 240, 0.08) 55%, rgba(232, 224, 240, 0) 88%)",
+  night:
+    "linear-gradient(100deg, rgba(44, 62, 107, 0.07) 0%, rgba(26, 37, 64, 0.05) 55%, rgba(26, 37, 64, 0) 88%)",
+};
+
 interface DashboardClientProps {
   profile: UserProfile;
   dailySet: DailyQuestionSet | null;
   memories: Memory[];
+  weekActivity: DayActivity[];
 }
 
 export default function DashboardClient({
   profile,
   dailySet,
   memories,
+  weekActivity,
 }: DashboardClientProps) {
   const firstName = profile.full_name?.split(" ")[0] ?? "there";
   const greeting = getGreeting();
+
+  // Computed after mount (client-side) so SSR markup never disagrees with
+  // the visitor's clock — the wash simply fades in once we know the hour.
+  const [dayPart, setDayPart] = useState<DayPart | null>(null);
+  useEffect(() => {
+    setDayPart(getDayPart(new Date().getHours()));
+  }, []);
 
   const allItems = (dailySet as any)?.items ?? [];
   const originalItems = allItems.filter((item: any) => item.sort_order <= 5);
@@ -78,45 +108,60 @@ export default function DashboardClient({
 
   return (
     <div className="max-w-4xl">
-      {/* Greeting */}
-      <div className="mb-8 animate-fade-in">
-        <h2 className="text-2xl font-bold text-twilight mb-1.5 tracking-tight">
-          {greeting}, {firstName}
-        </h2>
-        <p className="text-sm text-charcoal/50 font-medium">
-          {allOriginalDone && bonusItems.length === 0
-            ? "You've answered all your questions today. Want some follow-ups?"
-            : allOriginalDone && bonusItems.length > 0
-              ? `You have ${bonusItems.length - answeredFollowUps} bonus questions remaining.`
-              : totalQuestions > 0
-                ? "Your daily questions are waiting for you."
-                : "Your questions are being prepared..."}
-        </p>
-      </div>
+      {/* Greeting + stats, held by a time-of-day ambient wash */}
+      <div className="relative isolate mb-8">
+        <div
+          aria-hidden="true"
+          className="absolute -inset-x-4 -inset-y-3 sm:-inset-x-6 sm:-inset-y-4 rounded-3xl -z-10 pointer-events-none transition-opacity duration-1000 ease-out"
+          style={{
+            background: dayPart ? AMBIENT_WASH[dayPart] : undefined,
+            opacity: dayPart ? 1 : 0,
+          }}
+        />
 
-      {/* Quick stats */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-8 animate-fade-in-up">
-        <StatsCard
-          value={profile.current_streak}
-          label="Day Streak"
-          icon={Flame}
-          iconColor="text-golden-hour"
-          iconBg="bg-golden-hour/10"
-        />
-        <StatsCard
-          value={profile.total_responses}
-          label="Responses"
-          icon={BookOpen}
-          iconColor="text-deep-sky"
-          iconBg="bg-deep-sky/10"
-        />
-        <StatsCard
-          value={totalAll}
-          label="Questions Today"
-          icon={Sun}
-          iconColor="text-sunrise-coral"
-          iconBg="bg-sunrise-coral/10"
-        />
+        {/* Greeting */}
+        <div className="mb-8 animate-fade-in flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-twilight mb-1.5 tracking-tight">
+              {greeting}, {firstName}
+            </h2>
+            <p className="text-sm text-charcoal/50 font-medium">
+              {allOriginalDone && bonusItems.length === 0
+                ? "You've answered all your questions today. Want some follow-ups?"
+                : allOriginalDone && bonusItems.length > 0
+                  ? `You have ${bonusItems.length - answeredFollowUps} bonus questions remaining.`
+                  : totalQuestions > 0
+                    ? "Your daily questions are waiting for you."
+                    : "Your questions are being prepared..."}
+            </p>
+          </div>
+          {weekActivity.length > 0 && <WeekStrip days={weekActivity} />}
+        </div>
+
+        {/* Quick stats */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 animate-fade-in-up">
+          <StatsCard
+            value={profile.current_streak}
+            label="Day Streak"
+            icon={Flame}
+            iconColor="text-golden-hour"
+            iconBg="bg-golden-hour/10"
+          />
+          <StatsCard
+            value={profile.total_responses}
+            label="Responses"
+            icon={BookOpen}
+            iconColor="text-deep-sky"
+            iconBg="bg-deep-sky/10"
+          />
+          <StatsCard
+            value={totalAll}
+            label="Questions Today"
+            icon={Sun}
+            iconColor="text-sunrise-coral"
+            iconBg="bg-sunrise-coral/10"
+          />
+        </div>
       </div>
 
       {/* Daily progress */}

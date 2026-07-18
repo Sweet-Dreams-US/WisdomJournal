@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { toLocalDateKey } from "@/lib/utils/dates";
 
 export interface OrgMemberEntry {
   id: string;
@@ -46,12 +47,19 @@ export interface OrgDepartmentStats {
   entries_30d: number;
 }
 
+export interface OrgDailyActivityPoint {
+  dateKey: string;
+  count: number;
+}
+
 export interface OrgStats {
   total_members: number;
   entries_30d: number;
   active_members_30d: number;
   coverage: OrgCoverageEntry[];
   by_department: OrgDepartmentStats[];
+  /** Org-tagged responses per LOCAL day, last 30 days, oldest -> newest. Counts only. */
+  daily30: OrgDailyActivityPoint[];
 }
 
 export interface OrganizationDetail {
@@ -168,10 +176,10 @@ export async function getOrganization(
       .eq("organization_id", org.id)
       .is("deleted_at", null)
       .gte("created_at", thirtyDaysAgo),
-    // user_id only, for activity/department aggregation — no content
+    // user_id + timestamp only, for activity/department/daily aggregation — no content
     admin
       .from("responses")
-      .select("user_id")
+      .select("user_id, created_at")
       .eq("organization_id", org.id)
       .is("deleted_at", null)
       .gte("created_at", thirtyDaysAgo)
@@ -244,6 +252,27 @@ export async function getOrganization(
     );
   }
 
+  // Per-LOCAL-day counts across the last 30 days (counts only), oldest -> newest
+  const dailyCountByKey = new Map<string, number>();
+  const daily30: OrgDailyActivityPoint[] = [];
+  const now = new Date();
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+    const key = toLocalDateKey(d);
+    dailyCountByKey.set(key, 0);
+    daily30.push({ dateKey: key, count: 0 });
+  }
+  for (const row of recentResponsesResult.data ?? []) {
+    if (!row.created_at) continue;
+    const key = toLocalDateKey(row.created_at);
+    if (dailyCountByKey.has(key)) {
+      dailyCountByKey.set(key, (dailyCountByKey.get(key) ?? 0) + 1);
+    }
+  }
+  for (const point of daily30) {
+    point.count = dailyCountByKey.get(point.dateKey) ?? 0;
+  }
+
   // Coverage counts grouped by business category
   const coverageMap = new Map<
     string,
@@ -305,6 +334,7 @@ export async function getOrganization(
       active_members_30d: entriesByUser.size,
       coverage,
       by_department: byDepartment,
+      daily30,
     },
   };
 }

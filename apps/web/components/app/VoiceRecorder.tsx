@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Mic, Pause, Loader2 } from "lucide-react";
-import gsap from "gsap";
 
 interface Props {
   onTranscript: (text: string) => void;
@@ -18,30 +17,11 @@ export default function VoiceRecorder({ onTranscript, currentText, disabled }: P
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recognitionRef = useRef<any>(null);
-  const pulseRef = useRef<HTMLDivElement>(null);
   // Track text that existed before this recording session started
   const baseTextRef = useRef<string>("");
   // Track text accumulated in the current recording session
   const sessionTextRef = useRef<string>("");
   const isRecordingRef = useRef(false);
-
-  // Pulse animation while recording
-  useEffect(() => {
-    if (isRecording && pulseRef.current) {
-      gsap.to(pulseRef.current, {
-        scale: 1.4,
-        opacity: 0,
-        duration: 1,
-        repeat: -1,
-        ease: "power2.out",
-      });
-    }
-    return () => {
-      if (pulseRef.current) {
-        gsap.killTweensOf(pulseRef.current);
-      }
-    };
-  }, [isRecording]);
 
   // Timer
   useEffect(() => {
@@ -179,11 +159,19 @@ export default function VoiceRecorder({ onTranscript, currentText, disabled }: P
     <div className="flex flex-col items-center gap-3">
       {/* Record button */}
       <div className="relative">
+        {/* Slow breathing glow rings while recording */}
         {isRecording && (
-          <div
-            ref={pulseRef}
-            className="absolute inset-0 rounded-full bg-sunrise-coral/30"
-          />
+          <>
+            <div
+              aria-hidden
+              className="absolute -inset-2 rounded-full bg-sunrise-coral/25 animate-breathe"
+            />
+            <div
+              aria-hidden
+              className="absolute -inset-5 rounded-full bg-sunrise-coral/10 animate-breathe"
+              style={{ animationDelay: "-2s" }}
+            />
+          </>
         )}
         <button
           onClick={isRecording ? stopRecording : startRecording}

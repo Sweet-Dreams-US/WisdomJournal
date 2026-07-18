@@ -15,12 +15,10 @@ export default function SkyMoonSVG({ x, y, visible, phase }: Props) {
 
   useEffect(() => {
     if (!svgRef.current) return;
-    const glow = svgRef.current.querySelector(".moon-glow");
-    const ring1 = svgRef.current.querySelector(".moon-ring-1");
-    const ring2 = svgRef.current.querySelector(".moon-ring-2");
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    if (glow) {
-      gsap.to(glow, {
+    const ctx = gsap.context(() => {
+      gsap.to(".moon-glow", {
         opacity: 0.6,
         scale: 1.1,
         duration: 4,
@@ -28,10 +26,8 @@ export default function SkyMoonSVG({ x, y, visible, phase }: Props) {
         yoyo: true,
         ease: "sine.inOut",
       });
-    }
 
-    if (ring1) {
-      gsap.to(ring1, {
+      gsap.to(".moon-ring-1", {
         scale: 1.15,
         opacity: 0.2,
         duration: 6,
@@ -39,10 +35,8 @@ export default function SkyMoonSVG({ x, y, visible, phase }: Props) {
         yoyo: true,
         ease: "sine.inOut",
       });
-    }
 
-    if (ring2) {
-      gsap.to(ring2, {
+      gsap.to(".moon-ring-2", {
         scale: 1.2,
         opacity: 0.1,
         duration: 8,
@@ -51,8 +45,17 @@ export default function SkyMoonSVG({ x, y, visible, phase }: Props) {
         ease: "sine.inOut",
         delay: 1,
       });
-    }
+    }, svgRef);
+
+    return () => ctx.revert();
   }, []);
+
+  // The sky is fixed-position, so page content scrolls past the moon. The raw
+  // arc from getMoonPosition puts y anywhere between 10% and 85% of the
+  // viewport, which parked the bright disc directly behind section headings
+  // mid-scroll. Remap the arc into a 6%–26% top band so the moon stays above
+  // the reading line at every scroll position, keeping the arc's shape.
+  const bandY = 6 + ((Math.min(Math.max(y, 10), 85) - 10) * 20) / 75;
 
   // Moon phase shadow rendering
   // phase: 0=new (fully shadowed), 0.25=first quarter, 0.5=full (no shadow), 0.75=last quarter
@@ -66,19 +69,27 @@ export default function SkyMoonSVG({ x, y, visible, phase }: Props) {
   const showShadow = illumination > 0.05;
 
   return (
+    <div
+      className="absolute pointer-events-none transition-all duration-[2000ms] ease-in-out"
+      style={{
+        left: `${x}%`,
+        top: `${bandY}%`,
+        transform: "translate(-50%, -50%)",
+        opacity: visible ? 0.8 : 0,
+      }}
+      aria-hidden="true"
+    >
     <svg
       ref={svgRef}
       width="240"
       height="240"
       viewBox="0 0 280 280"
-      className="absolute pointer-events-none transition-all duration-[2000ms] ease-in-out"
+      className="block"
       style={{
-        left: `${x}%`,
-        top: `${y}%`,
-        transform: "translate(-50%, -50%)",
-        opacity: visible ? 0.8 : 0,
+        // Ultra-slow ambient drift (reuses the global `float` keyframe,
+        // slowed to 14s). Reduced motion zeroes this via globals.css.
+        animation: "float 14s ease-in-out infinite",
       }}
-      aria-hidden="true"
     >
       <defs>
         <radialGradient id="skyMoonGlow" cx="50%" cy="50%" r="50%">
@@ -126,5 +137,6 @@ export default function SkyMoonSVG({ x, y, visible, phase }: Props) {
         />
       )}
     </svg>
+    </div>
   );
 }

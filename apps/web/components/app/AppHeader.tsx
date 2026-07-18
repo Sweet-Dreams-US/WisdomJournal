@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu, Sparkles } from "lucide-react";
 import { useSidebar } from "./SidebarProvider";
@@ -45,6 +46,18 @@ export default function AppHeader() {
   const pathname = usePathname();
   const { toggle } = useSidebar();
   const { title, subtitle } = getPageInfo(pathname);
+  const [dateLabel, setDateLabel] = useState("");
+
+  // Computed client-side after mount so the server never guesses the user's timezone
+  useEffect(() => {
+    setDateLabel(
+      new Date().toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+      })
+    );
+  }, []);
 
   return (
     <header className="h-14 bg-white/70 backdrop-blur-xl border-b border-charcoal/[0.06] flex items-center px-4 md:px-8 sticky top-0 z-30">
@@ -59,7 +72,12 @@ export default function AppHeader() {
         <div className="hidden sm:flex w-8 h-8 rounded-lg bg-gradient-to-br from-deep-sky/10 to-sky-blue/5 items-center justify-center">
           <Sparkles className="w-3.5 h-3.5 text-deep-sky/60" />
         </div>
-        <div>
+        {/* Keyed by pathname so the title block remounts and fades in on route change */}
+        <div
+          key={pathname}
+          className="animate-fade-in"
+          style={{ animationDuration: "200ms" }}
+        >
           <h1 className="text-base font-semibold text-twilight tracking-tight leading-tight">
             {title}
           </h1>
@@ -69,6 +87,11 @@ export default function AppHeader() {
             </p>
           )}
         </div>
+      </div>
+
+      {/* Current local date */}
+      <div className="ml-auto hidden md:block text-xs font-medium text-charcoal/40">
+        {dateLabel}
       </div>
     </header>
   );

@@ -26,8 +26,10 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import StatsCard from "@/components/ui/StatsCard";
 import EmptyState from "@/components/ui/EmptyState";
+import Sparkline from "@/components/visualizations/Sparkline";
 import { useToast } from "@/components/ui/Toast";
 import { plural } from "@/lib/utils/plural";
+import { getCategoryStyle } from "@/lib/category-utils";
 
 export type OrgRole = "owner" | "admin" | "member";
 export type MemberStatus = "active" | "departed";
@@ -79,6 +81,7 @@ export interface OrgStats {
     member_count: number;
     entries_30d: number;
   }>;
+  daily30: Array<{ dateKey: string; count: number }>;
 }
 
 export interface OrganizationDetail {
@@ -120,6 +123,15 @@ function formatDate(iso: string): string {
     month: "short",
     day: "numeric",
     year: "numeric",
+  });
+}
+
+/** Format a YYYY-MM-DD dateKey as "Jun 19" without UTC drift. */
+function shortDateLabel(dateKey: string): string {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
   });
 }
 
@@ -479,6 +491,15 @@ export default function OrgClient({ data }: OrgClientProps) {
 
   return (
     <div className="max-w-4xl">
+      {/* Shared bar draw-in (scaleX from the left; transform-only, covered
+          by the global prefers-reduced-motion zeroing in globals.css) */}
+      <style>{`
+        @keyframes orgBarGrow {
+          from { transform: scaleX(0); }
+          to { transform: scaleX(1); }
+        }
+      `}</style>
+
       {/* Back link */}
       <Link
         href="/organizations"
@@ -563,6 +584,64 @@ export default function OrgClient({ data }: OrgClientProps) {
             />
           </div>
 
+          {/* Solo-org invite CTA */}
+          {stats.total_members === 1 && isAdmin && (
+            <div className="mb-6 rounded-card shadow-card border border-golden-hour/30 bg-gradient-to-br from-golden-hour/[0.08] via-white to-white p-6 animate-fade-in-up">
+              <div className="flex items-start gap-4 flex-wrap sm:flex-nowrap">
+                <div className="w-11 h-11 rounded-xl bg-golden-hour/15 flex items-center justify-center flex-shrink-0">
+                  <UserPlus className="w-5 h-5 text-golden-hour" />
+                </div>
+                <div className="flex-1 min-w-[200px]">
+                  <p className="font-heading text-lg text-twilight mb-1">
+                    It&apos;s quiet in here
+                  </p>
+                  <p className="text-sm text-charcoal/60">
+                    Knowledge capture works best with your key people — invite
+                    your first teammate and watch this dashboard come alive.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  className="flex-shrink-0"
+                  onClick={() => {
+                    setTab("members");
+                    setShowInvite(true);
+                  }}
+                >
+                  <UserPlus className="w-4 h-4 mr-1.5" />
+                  Invite a teammate
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* 30-day activity sparkline */}
+          <Card padding="md" className="mb-6">
+            <div className="flex items-baseline justify-between mb-3">
+              <span className="text-sm font-semibold text-charcoal">
+                30-day activity
+              </span>
+              <span className="text-right">
+                <span className="font-heading text-2xl text-twilight leading-none">
+                  {stats.entries_30d}
+                </span>
+                <span className="text-xs text-charcoal/40 ml-1.5">
+                  {stats.entries_30d === 1 ? "entry" : "entries"}
+                </span>
+              </span>
+            </div>
+            <Sparkline
+              data={stats.daily30.map((d) => d.count)}
+              label={`Entries per day over the last 30 days: ${stats.entries_30d} total`}
+            />
+            {stats.daily30.length > 0 && (
+              <div className="flex items-center justify-between text-[10px] text-charcoal/40 mt-1.5">
+                <span>{shortDateLabel(stats.daily30[0].dateKey)}</span>
+                <span>Today</span>
+              </div>
+            )}
+          </Card>
+
           {/* Business category coverage */}
           <Card padding="md" className="mb-6">
             <div className="flex items-center justify-between mb-3">
@@ -580,24 +659,39 @@ export default function OrgClient({ data }: OrgClientProps) {
               </p>
             ) : (
               <div className="space-y-2.5">
-                {stats.coverage.map((cat) => (
-                  <div key={cat.category_slug}>
-                    <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="text-charcoal/70">{cat.category_name}</span>
-                      <span className="text-charcoal/40">
-                        {plural(cat.response_count, "entry", "entries")}
-                      </span>
+                {stats.coverage.map((cat, i) => {
+                  const catStyle = getCategoryStyle(cat.category_slug);
+                  const CatIcon = catStyle.icon;
+                  return (
+                    <div key={cat.category_slug}>
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="flex items-center gap-1.5 text-charcoal/70 min-w-0">
+                          <span
+                            className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ${catStyle.bgColor}`}
+                          >
+                            <CatIcon className={`w-3 h-3 ${catStyle.color}`} />
+                          </span>
+                          <span className="truncate">{cat.category_name}</span>
+                        </span>
+                        <span className="text-charcoal/40 flex-shrink-0 ml-2">
+                          {plural(cat.response_count, "entry", "entries")}
+                        </span>
+                      </div>
+                      <div className="h-2 bg-soft-gray rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-deep-sky rounded-full transition-all"
+                          style={{
+                            width: `${(cat.response_count / maxCoverage) * 100}%`,
+                            transformOrigin: "left",
+                            animation:
+                              "orgBarGrow 0.7s cubic-bezier(0.22, 1, 0.36, 1) both",
+                            animationDelay: `${0.15 + Math.min(i, 8) * 0.07}s`,
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div className="h-2 bg-soft-gray rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-deep-sky rounded-full transition-all"
-                        style={{
-                          width: `${(cat.response_count / maxCoverage) * 100}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </Card>
@@ -1251,7 +1345,13 @@ export default function OrgClient({ data }: OrgClientProps) {
                 className={`h-full rounded-full transition-all ${
                   seatsUsed >= org.max_seats ? "bg-golden-hour" : "bg-deep-sky"
                 }`}
-                style={{ width: `${seatPercent}%` }}
+                style={{
+                  width: `${seatPercent}%`,
+                  transformOrigin: "left",
+                  animation:
+                    "orgBarGrow 0.8s cubic-bezier(0.22, 1, 0.36, 1) both",
+                  animationDelay: "0.1s",
+                }}
               />
             </div>
             <p className="text-xs text-charcoal/40 mt-2">

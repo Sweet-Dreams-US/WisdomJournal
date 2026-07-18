@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react'
+import { CheckCircle2, XCircle, Info, AlertTriangle, X, type LucideIcon } from 'lucide-react'
 
 type ToastType = 'success' | 'error' | 'info' | 'warning'
 
@@ -60,42 +61,39 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     info: (msg) => addToast('info', msg),
   }
 
-  const typeStyles = {
-    success: 'bg-emerald-500/90 border-emerald-400/30',
-    error: 'bg-red-500/90 border-red-400/30',
-    info: 'bg-sky-500/90 border-sky-400/30',
-    warning: 'bg-amber-500/90 border-amber-400/30',
-  }
-
-  const typeIcons = {
-    success: '\u2713',
-    error: '\u2715',
-    info: '\u2139',
-    warning: '\u26A0',
+  const typeConfig: Record<ToastType, { icon: LucideIcon; accent: string; iconColor: string }> = {
+    success: { icon: CheckCircle2, accent: 'border-l-success', iconColor: 'text-success' },
+    error: { icon: XCircle, accent: 'border-l-error', iconColor: 'text-error' },
+    info: { icon: Info, accent: 'border-l-deep-sky', iconColor: 'text-deep-sky' },
+    warning: { icon: AlertTriangle, accent: 'border-l-golden-hour', iconColor: 'text-golden-hour' },
   }
 
   return (
     <ToastContext.Provider value={contextValue}>
       {children}
       <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
-        {toasts.map((t) => (
-          <div
-            key={t.id}
-            className={`pointer-events-auto px-4 py-3 rounded-xl border backdrop-blur-sm shadow-lg
-              text-white text-sm font-medium flex items-center gap-2 min-w-[250px] max-w-[400px]
-              animate-in slide-in-from-right-5 fade-in duration-300
-              ${typeStyles[t.type]}`}
-          >
-            <span className="text-base shrink-0">{typeIcons[t.type]}</span>
-            <span className="flex-1">{t.message}</span>
-            <button
-              onClick={() => removeToast(t.id)}
-              className="shrink-0 text-white/60 hover:text-white ml-2"
+        {toasts.map((t) => {
+          const ToastIcon = typeConfig[t.type].icon
+          return (
+            <div
+              key={t.id}
+              className={`pointer-events-auto pl-3.5 pr-3 py-3 rounded-xl bg-white border border-charcoal/[0.08] border-l-4 shadow-card-hover
+                text-twilight text-sm font-medium flex items-center gap-2.5 min-w-[250px] max-w-[400px]
+                animate-slide-in-right
+                ${typeConfig[t.type].accent}`}
             >
-              {'\u2715'}
-            </button>
-          </div>
-        ))}
+              <ToastIcon className={`w-4 h-4 shrink-0 ${typeConfig[t.type].iconColor}`} />
+              <span className="flex-1">{t.message}</span>
+              <button
+                onClick={() => removeToast(t.id)}
+                className="shrink-0 ml-2 text-charcoal/30 hover:text-charcoal/60 transition-colors"
+                aria-label="Dismiss"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )
+        })}
       </div>
     </ToastContext.Provider>
   )

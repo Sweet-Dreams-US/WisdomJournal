@@ -31,7 +31,10 @@ export default function Pricing() {
 
         <ScrollReveal direction="up">
           <div className="max-w-lg mx-auto">
-            <div className="glass-card rounded-2xl p-8 relative border-sky-blue/30 glow-blue hover:border-white/15 transition-all duration-500">
+            <div
+              className="glass-card rounded-2xl p-8 relative border-sky-blue/30 glow-blue animate-glow-pulse hover:-translate-y-1 hover:border-sky-blue/60 transition-all duration-300"
+              style={{ animationDuration: "4s" }}
+            >
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-deep-sky to-sky-blue text-white text-[10px] font-body font-bold px-4 py-1.5 rounded-full tracking-widest uppercase flex items-center gap-1.5">
                 <Sparkles className="w-3 h-3" />
                 Beta Access

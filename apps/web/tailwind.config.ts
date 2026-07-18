@@ -65,6 +65,7 @@ const config: Config = {
         128: "32rem",
       },
       animation: {
+        "route-enter": "routeEnter 0.28s cubic-bezier(0.22, 1, 0.36, 1) both",
         "fade-in": "fadeIn 0.5s ease-out",
         "fade-in-up": "fadeInUp 0.5s ease-out",
         "fade-in-down": "fadeInDown 0.4s ease-out",
@@ -82,6 +83,12 @@ const config: Config = {
         "bounce-subtle": "bounceSubtle 2s ease-in-out infinite",
       },
       keyframes: {
+        // Route transition for (app) template.tsx — ends at "none" so the
+        // wrapper never stays a containing block for fixed descendants.
+        routeEnter: {
+          "0%": { opacity: "0", transform: "translateY(8px)" },
+          "100%": { opacity: "1", transform: "none" },
+        },
         fadeIn: {
           "0%": { opacity: "0" },
           "100%": { opacity: "1" },

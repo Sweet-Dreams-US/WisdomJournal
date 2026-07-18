@@ -9,9 +9,12 @@ import {
 import Card from "@/components/ui/Card";
 import type { KnowledgeWebData } from "@/lib/data/get-knowledge-web";
 import type { CategoryTrend } from "@/lib/data/get-category-trends";
+import type { GrowthStats } from "@/lib/data/get-growth-stats";
 import type { UserProfile, EncyclopediaStats, CategoryBreakdown } from "@wisdom-journal/shared";
 import { getCategoryStyle } from "@/lib/category-utils";
 import StreakFlame from "@/components/visualizations/StreakFlame";
+import GrowthChart from "@/components/visualizations/GrowthChart";
+import RhythmChart from "@/components/visualizations/RhythmChart";
 
 // Dynamic imports to avoid SSR issues with D3
 const KnowledgeWeb = dynamic(
@@ -122,10 +125,17 @@ interface Props {
   profile: UserProfile | null;
   stats: EncyclopediaStats | null;
   categoryTrends?: CategoryTrend[];
+  growth?: GrowthStats | null;
 }
 
-export default function EncyclopediaClient({ webData, profile, stats, categoryTrends = [] }: Props) {
-  const [activeTab, setActiveTab] = useState<"web" | "radar" | "categories">("web");
+export default function EncyclopediaClient({
+  webData,
+  profile,
+  stats,
+  categoryTrends = [],
+  growth = null,
+}: Props) {
+  const [activeTab, setActiveTab] = useState<"web" | "radar" | "categories" | "growth">("web");
 
   const displayName = profile?.full_name?.split(" ")[0] ?? "Your";
 
@@ -142,6 +152,7 @@ export default function EncyclopediaClient({ webData, profile, stats, categoryTr
     { key: "web" as const, label: "Knowledge Web" },
     { key: "radar" as const, label: "Wisdom Shape" },
     { key: "categories" as const, label: "Categories" },
+    { key: "growth" as const, label: "Growth" },
   ];
 
   return (
@@ -321,6 +332,30 @@ export default function EncyclopediaClient({ webData, profile, stats, categoryTr
               </p>
             </Card>
           )}
+        </div>
+      )}
+
+      {activeTab === "growth" && (
+        <div className="space-y-4 animate-fade-in-up">
+          <Card padding="lg">
+            <div className="mb-6">
+              <h2 className="font-heading text-lg text-twilight">The archive grows</h2>
+              <p className="text-xs text-charcoal/45 font-body mt-1">
+                Every entry adds to a record only you could write. This is how it has accumulated, word by word.
+              </p>
+            </div>
+            <GrowthChart points={growth?.cumulative ?? []} />
+          </Card>
+
+          <Card padding="lg">
+            <div className="mb-6">
+              <h2 className="font-heading text-lg text-twilight">Your rhythm</h2>
+              <p className="text-xs text-charcoal/45 font-body mt-1">
+                The days of the week your writing naturally gathers on.
+              </p>
+            </div>
+            <RhythmChart byWeekday={growth?.byWeekday ?? []} />
+          </Card>
         </div>
       )}
     </div>

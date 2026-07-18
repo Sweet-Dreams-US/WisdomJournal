@@ -12,14 +12,37 @@ export default function Navbar() {
   const menuRef = useRef<HTMLDivElement>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     if (!navRef.current) return;
-    gsap.fromTo(
-      navRef.current,
-      { y: -80, opacity: 0 },
-      { y: 0, opacity: 1, duration: 1, ease: "power3.out", delay: 0.3 }
-    );
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        navRef.current,
+        { y: -80, opacity: 0 },
+        { y: 0, opacity: 1, duration: 1, ease: "power3.out", delay: 0.3 }
+      );
+    }, navRef);
+    return () => ctx.revert();
+  }, []);
+
+  // Scroll state: transparent at the very top, frosted glass once scrolled
+  useEffect(() => {
+    let ticking = false;
+    const update = () => {
+      setScrolled(window.scrollY > 40);
+      ticking = false;
+    };
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        window.requestAnimationFrame(update);
+      }
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   useEffect(() => {
@@ -51,7 +74,11 @@ export default function Navbar() {
   return (
     <nav
       ref={navRef}
-      className="fixed top-0 left-0 right-0 z-50 bg-black/30 backdrop-blur-xl border-b border-white/5"
+      className={`fixed top-0 left-0 right-0 z-50 border-b transition-[background-color,border-color,backdrop-filter] duration-300 ${
+        scrolled || mobileOpen
+          ? "bg-night-sky/70 backdrop-blur-xl border-white/5"
+          : "bg-transparent backdrop-blur-0 border-transparent"
+      }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">

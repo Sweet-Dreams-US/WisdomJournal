@@ -46,18 +46,28 @@ function BusinessHero() {
             </span>
           </div>
 
-          <h1
-            className="font-heading text-3xl sm:text-4xl lg:text-5xl text-white leading-tight mb-8 text-glow animate-stagger-in"
-            style={{ animationDelay: "0.25s" }}
-          >
-            Institutional knowledge,
-            <br />
-            <span className="text-golden-hour text-glow-gold">preserved</span>
+          <h1 className="font-heading text-3xl sm:text-4xl lg:text-5xl text-white leading-tight mb-8">
+            <span className="block overflow-hidden py-2 -my-2">
+              <span
+                className="biz-hero-line block text-glow"
+                style={{ animationDelay: "0.35s" }}
+              >
+                Institutional knowledge,
+              </span>
+            </span>
+            <span className="block overflow-hidden py-2 -my-2">
+              <span
+                className="biz-hero-line block text-golden-hour text-glow-gold"
+                style={{ animationDelay: "0.47s" }}
+              >
+                preserved
+              </span>
+            </span>
           </h1>
 
           <p
             className="font-body text-base sm:text-lg text-stardust/70 mb-12 leading-relaxed max-w-2xl mx-auto font-light animate-stagger-in"
-            style={{ animationDelay: "0.4s" }}
+            style={{ animationDelay: "0.9s" }}
           >
             Key people leave &mdash; and take a decade of judgment with them.
             Wisdom Journal captures how your experts think, decide, and get
@@ -66,7 +76,7 @@ function BusinessHero() {
 
           <div
             className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-stagger-in"
-            style={{ animationDelay: "0.55s" }}
+            style={{ animationDelay: "1.05s" }}
           >
             <Link href="/register">
               <Button size="lg">Start Your Organization</Button>
@@ -80,12 +90,23 @@ function BusinessHero() {
 
           <p
             className="mt-8 text-xs font-body text-white/30 tracking-wider animate-stagger-in"
-            style={{ animationDelay: "0.7s" }}
+            style={{ animationDelay: "1.2s" }}
           >
             Free during beta &middot; No credit card required
           </p>
         </div>
       </div>
+
+      <style>{`
+        .biz-hero-line {
+          transform: translateY(130%);
+          animation: bizHeroLineRise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        @keyframes bizHeroLineRise {
+          from { transform: translateY(130%); }
+          to { transform: translateY(0); }
+        }
+      `}</style>
     </section>
   );
 }
@@ -371,7 +392,10 @@ function BusinessPricing() {
 
         <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           <ScrollReveal direction="up">
-            <div className="glass-card rounded-2xl p-8 relative h-full border-sky-blue/30 glow-blue hover:border-white/15 transition-all duration-500">
+            <div
+              className="glass-card rounded-2xl p-8 relative h-full border-sky-blue/30 glow-blue animate-glow-pulse hover:-translate-y-1 hover:border-sky-blue/60 transition-all duration-300"
+              style={{ animationDuration: "4s" }}
+            >
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-deep-sky to-sky-blue text-white text-[10px] font-body font-bold px-4 py-1.5 rounded-full tracking-widest uppercase">
                 Most Popular
               </div>
@@ -413,7 +437,7 @@ function BusinessPricing() {
           </ScrollReveal>
 
           <ScrollReveal direction="up" delay={0.15}>
-            <div className="glass-card rounded-2xl p-8 relative h-full hover:border-white/15 transition-all duration-500">
+            <div className="glass-card rounded-2xl p-8 relative h-full hover:-translate-y-1 hover:border-white/25 transition-all duration-300">
               <div className="text-center mb-8 mt-2">
                 <h3 className="font-body text-lg font-bold text-white mb-3">
                   Enterprise
